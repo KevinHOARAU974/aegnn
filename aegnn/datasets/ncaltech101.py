@@ -83,7 +83,7 @@ class NCaltech101(EventDataModule):
         return label_dict.get(label, None)
 
     def _load_processed_file(self, f_path: str) -> Data:
-        return torch.load(f_path)
+        return torch.load(f_path, weights_only=False)
 
     #########################################################################################################
     # Processing ############################################################################################
@@ -91,6 +91,7 @@ class NCaltech101(EventDataModule):
     def _prepare_dataset(self, mode: str):
         processed_dir = os.path.join(self.root, "processed")
         raw_files = self.raw_files(mode)
+        print(f'RAW FILer length {len(raw_files)}')
         class_dict = {class_id: i for i, class_id in enumerate(self.classes)}
         kwargs = dict(load_func=self.load, class_dict=class_dict, pre_transform=self.pre_transform,
                       read_label=self.read_label, read_annotations=self.read_annotations)

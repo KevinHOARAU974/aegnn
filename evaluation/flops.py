@@ -95,9 +95,12 @@ def get_log_values(model, attr: str, log_key: str, **log_dict):
 ##################################################################################################
 def run_experiments(dm, args, experiments: List[int], num_trials: int, device: torch.device, **model_kwargs
                     ) -> pd.DataFrame:
+    
+    #Create file to store results
     results_df = pd.DataFrame()
     output_file = os.path.join(os.path.dirname(os.path.realpath(__file__)), "..", "..", "aegnn_results", "flops.pkl")
     os.makedirs(os.path.dirname(output_file), exist_ok=True)
+    
 
     runs = list(itertools.product(experiments, list(range(num_trials))))
     for num_events, exp_id in tqdm(runs):

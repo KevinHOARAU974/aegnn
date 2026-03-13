@@ -33,7 +33,7 @@ class NCars(NCaltech101):
     @staticmethod
     def load(raw_file: str) -> Data:
         events_file = os.path.join(raw_file, "events.txt")
-        events = torch.from_numpy(np.loadtxt(events_file)).float().cuda()
+        events = torch.from_numpy(np.loadtxt(events_file)).float()#.cuda()
         x, pos = events[:, -1:], events[:, :3]
         return Data(x=x, pos=pos)
 
@@ -54,6 +54,8 @@ class NCars(NCaltech101):
     # Files #################################################################################################
     #########################################################################################################
     def raw_files(self, mode: str) -> List[str]:
+        lep = os.path.join(self.root, mode, "*")
+        print(f"je vaius chercher ici: {lep}")
         return glob.glob(os.path.join(self.root, mode, "*"))
 
     def processed_files(self, mode: str) -> List[str]:
@@ -63,3 +65,5 @@ class NCars(NCaltech101):
     @property
     def classes(self) -> List[str]:
         return ["car", "background"]
+
+

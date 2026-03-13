@@ -20,6 +20,7 @@ def __graph_initialization(module: Linear, x: torch.Tensor) -> torch.Tensor:
 
 def __graph_processing(module: Linear, x: torch.Tensor) -> torch.Tensor:
     diff_idx = torch.nonzero(x - module.asy_graph.x).t().detach().cpu().numpy()  # numpy for indexing
+    print(f"x.size = {x.size()}, module.asy_graph. diff_idx = {diff_idx}")
     x_diff = x[diff_idx] - module.asy_graph.x[diff_idx]
     y_residual = torch.mul(module.weight[:, diff_idx[1, :]], x_diff).t()
 

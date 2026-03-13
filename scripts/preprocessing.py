@@ -27,4 +27,5 @@ if __name__ == '__main__':
     pl.seed_everything(args.seed)
 
     dm = aegnn.datasets.by_name(args.dataset).from_argparse_args(args)
+    # print('Jai fini dinstancier!!')
     dm.prepare_data()
