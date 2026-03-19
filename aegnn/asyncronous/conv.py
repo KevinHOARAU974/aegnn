@@ -15,6 +15,7 @@ from .flops import compute_flops_conv
 
 def __graph_initialization(module, x: torch.Tensor, edge_index: Adj = None, edge_attr=None):
     pos = module.asy_pos
+    # print(f'The value of pos (at the begining) is: {pos}')
     if edge_attr is None:
         if edge_index is None:
             edge_index = compute_edges(module, pos=pos)
@@ -27,7 +28,7 @@ def __graph_initialization(module, x: torch.Tensor, edge_index: Adj = None, edge
     else:
         y = module.sync_forward(x, edge_index=edge_index, edge_attr=edge_attr)
     module.asy_graph = Data(x=x, pos=pos, edge_index=edge_index, edge_attr=edge_attr, y=y)
-
+    # print(f'The value of pos (after processing the initial graph) is: {pos}')
     # If required, compute the flops of the asynchronous update operation. Therefore, sum the flops for each node
     # update, as they highly depend on the number of neighbors of this node.
     if module.asy_flops_log is not None:
@@ -36,8 +37,10 @@ def __graph_initialization(module, x: torch.Tensor, edge_index: Adj = None, edge
 
     # If the layer is an initial layer, it will change the pos vector, when new events are added to the graph.
     # Therefore, we have to return the pos here as well.
+    # print("The conv layer is here")
     if module.asy_is_initial:
         module.asy_pass_attribute('asy_pos', pos)
+        # print("The conv layer is the intial")
     return module.asy_graph.y
 
 

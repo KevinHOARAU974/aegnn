@@ -17,6 +17,7 @@ class GraphRes(torch.nn.Module):
         super(GraphRes, self).__init__()
         assert len(input_shape) == 3, "invalid input shape, should be (img_width, img_height, dim)"
         dim = int(input_shape[-1])
+        self.feature_map = None
 
         # Set dataset specific hyper-parameters.
         if dataset == "ncars":
@@ -78,4 +79,5 @@ class GraphRes(torch.nn.Module):
 
         x = self.pool7(data.x, pos=data.pos[:, :2], batch=data.batch)
         x = x.view(-1, self.fc.in_features)
+        self.feature_map = x
         return self.fc(x)
