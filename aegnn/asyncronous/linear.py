@@ -19,19 +19,20 @@ def __graph_initialization(module: Linear, x: torch.Tensor) -> torch.Tensor:
 
 
 def __graph_processing(module: Linear, x: torch.Tensor) -> torch.Tensor:
-    diff_idx = torch.nonzero(x - module.asy_graph.x).t().detach().cpu().numpy()  # numpy for indexing
-    print(f"x.size = {x.size()}, module.asy_graph. diff_idx = {diff_idx.shape}")
+    diff_idx = torch.nonzero(x - module.asy_graph.x, as_tuple = True) # numpy for indexing
     x_diff = x[diff_idx] - module.asy_graph.x[diff_idx]
-    y_residual = torch.mul(module.weight[:, diff_idx[1, :]], x_diff).t()
+    y_residual = torch.mul(module.weight[:, diff_idx[1]], x_diff).t()
 
     # Update the graph with the new values (only there where it has changed).
     module.asy_graph.x[diff_idx] = x[diff_idx]
-    if diff_idx.size > 0:
-        module.asy_graph.y[diff_idx[0, :], :] += y_residual
+    size_diff_idx = len(diff_idx) * diff_idx[0].shape[0]
+
+    if size_diff_idx > 0:
+        module.asy_graph.y[diff_idx[0], :] += y_residual
 
     # If required, compute the flops of the asynchronous update operation.
     if module.asy_flops_log is not None:
-        flops = int(diff_idx.shape[0] * diff_idx.shape[1])
+        flops = size_diff_idx
         flops += y_residual.numel()  # graph update
         module.asy_flops_log.append(flops)
     return module.asy_graph.y
