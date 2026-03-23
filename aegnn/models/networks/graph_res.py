@@ -54,30 +54,32 @@ class GraphRes(torch.nn.Module):
         self.fc = Linear(pooling_outputs * 16, out_features=num_outputs, bias=bias)
 
     def forward(self, data: torch_geometric.data.Batch) -> torch.Tensor:
-        data.x = elu(self.conv1(data.x, data.edge_index, data.edge_attr))
-        data.x = self.norm1(data.x)
-        data.x = elu(self.conv2(data.x, data.edge_index, data.edge_attr))
-        data.x = self.norm2(data.x)
+        x_f = data.x.clone()
+        x_f = elu(self.conv1(x_f, data.edge_index, data.edge_attr))
+        x_f = self.norm1(x_f)
+        x_f = elu(self.conv2(x_f, data.edge_index, data.edge_attr))
+        x_f = self.norm2(x_f)
 
-        x_sc = data.x.clone()
-        data.x = elu(self.conv3(data.x, data.edge_index, data.edge_attr))
-        data.x = self.norm3(data.x)
-        data.x = elu(self.conv4(data.x, data.edge_index, data.edge_attr))
-        data.x = self.norm4(data.x)
-        data.x = data.x + x_sc
+        x_sc = x_f.clone()
+        x_f = elu(self.conv3(x_f, data.edge_index, data.edge_attr))
+        x_f = self.norm3(x_f)
+        x_f = elu(self.conv4(x_f, data.edge_index, data.edge_attr))
+        x_f = self.norm4(x_f)
+        x_f = x_f + x_sc
 
-        data.x = elu(self.conv5(data.x, data.edge_index, data.edge_attr))
-        data.x = self.norm5(data.x)
-        data = self.pool5(data.x, pos=data.pos, batch=data.batch, edge_index=data.edge_index, return_data_obj=True)
+        x_f = elu(self.conv5(x_f, data.edge_index, data.edge_attr))
+        x_f = self.norm5(x_f)
+        data_pooled = self.pool5(x_f, pos=data.pos, batch=data.batch, edge_index=data.edge_index, return_data_obj=True)
 
-        x_sc = data.x.clone()
-        data.x = elu(self.conv6(data.x, data.edge_index, data.edge_attr))
-        data.x = self.norm6(data.x)
-        data.x = elu(self.conv7(data.x, data.edge_index, data.edge_attr))
-        data.x = self.norm7(data.x)
-        data.x = data.x + x_sc
+        x_f = data_pooled.x.clone()
+        x_sc = x_f.clone()
+        x_f = elu(self.conv6(x_f, data_pooled.edge_index, data_pooled.edge_attr))
+        x_f = self.norm6(x_f)
+        x_f = elu(self.conv7(x_f, data_pooled.edge_index, data_pooled.edge_attr))
+        x_f = self.norm7(x_f)
+        x_f = x_f + x_sc
 
-        x = self.pool7(data.x, pos=data.pos[:, :2], batch=data.batch)
+        x = self.pool7(x_f, pos=data_pooled.pos[:, :2], batch=data_pooled.batch)
         x = x.view(-1, self.fc.in_features)
         self.feature_map = x
         return self.fc(x)

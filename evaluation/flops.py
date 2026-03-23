@@ -109,7 +109,7 @@ def run_experiments(dm, args, experiments: List[int], num_trials: int, device: t
         # Get the logged flops and timings, both layer-wise and in total.
         results_flops = get_log_values(model, attr="asy_flops_log", log_key="flops", num_events=num_events)
         results_runtime = get_log_values(model, attr="asy_runtime_log", log_key="runtime", num_events=num_events)
-        results_df = results_df.append(results_flops + results_runtime, ignore_index=True)
+        results_df = pd.concat([results_df, pd.DataFrame(results_flops + results_runtime)], ignore_index=True)
         results_df.to_pickle(output_file)
 
         # Fully reset run to ensure independence between subsequent experiments.
