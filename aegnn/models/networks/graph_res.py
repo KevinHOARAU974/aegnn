@@ -6,6 +6,8 @@ from torch.nn.functional import elu
 from torch_geometric.nn.conv import SplineConv
 from torch_geometric.nn.norm import BatchNorm
 from torch_geometric.transforms import Cartesian
+from torch_geometric.data import Data
+
 
 from aegnn.models.layer import MaxPooling, MaxPoolingX
 
@@ -18,6 +20,8 @@ class GraphRes(torch.nn.Module):
         assert len(input_shape) == 3, "invalid input shape, should be (img_width, img_height, dim)"
         dim = int(input_shape[-1])
         self.feature_map = None
+        self.fm_to_pool = None #feature map before first max pooling layer
+        self.fm_to_pool_x = None #feature map before second max pooling layer
 
         # Set dataset specific hyper-parameters.
         if dataset == "ncars":
@@ -69,6 +73,7 @@ class GraphRes(torch.nn.Module):
 
         x_f = elu(self.conv5(x_f, data.edge_index, data.edge_attr))
         x_f = self.norm5(x_f)
+        self.fm_to_pool = Data(x=x_f, pos=data.pos, batch=data.batch, edge_index=data.edge_index, edge_attr=data.edge_attr)
         data_pooled = self.pool5(x_f, pos=data.pos, batch=data.batch, edge_index=data.edge_index, return_data_obj=True)
 
         x_f = data_pooled.x.clone()
@@ -79,6 +84,7 @@ class GraphRes(torch.nn.Module):
         x_f = self.norm7(x_f)
         x_f = x_f + x_sc
 
+        self.fm_to_pool_x = Data(x=x_f, pos=data_pooled.pos, batch=data_pooled.batch, edge_index=data_pooled.edge_index, edge_attr=data_pooled.edge_attr)
         x = self.pool7(x_f, pos=data_pooled.pos[:, :2], batch=data_pooled.batch)
         x = x.view(-1, self.fc.in_features)
         self.feature_map = x
