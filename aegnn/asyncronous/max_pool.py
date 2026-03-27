@@ -171,7 +171,7 @@ def __get_clusters(module, pos: torch.Tensor) -> torch.LongTensor:
     num_pos, num_dims = pos.shape
     grid_start = torch.zeros(num_dims, device=pos.device)
     grid_end = module.grid_size
-    return voxel_grid(pos, batch=torch.zeros(num_pos), size=module.voxel_size, start=grid_start, end=grid_end)
+    return voxel_grid(pos, batch=torch.zeros(num_pos, device=pos.device, dtype=torch.long), size=module.voxel_size, start=grid_start, end=grid_end)
 
 
 def __get_num_voxels(module, dim: int = None) -> int:

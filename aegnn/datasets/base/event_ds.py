@@ -1,7 +1,9 @@
 from torch_geometric.data import Data
-from torch.utils.data.dataset import Dataset, T_co
+from torch.utils.data.dataset import Dataset
+from typing import TypeVar
 from typing import Callable, List
 
+T_co = TypeVar("T_co", covariant=True)
 
 class EventDataset(Dataset):
 

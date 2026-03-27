@@ -14,7 +14,19 @@ class MaxPoolingX(torch.nn.Module):
 
     def forward(self, x: torch.Tensor, pos: torch.Tensor, batch: Optional[torch.Tensor] = None
                 ) -> Union[Tuple[torch.Tensor, torch.Tensor, torch.LongTensor, torch.Tensor, torch.Tensor], Data]:
-        cluster = voxel_grid(pos, batch=batch, size=self.voxel_size)
+        
+        pos = pos.float()
+
+        if batch is not None:
+            batch = batch.long()
+        
+        size = self.voxel_size
+        if torch.is_tensor(size):
+            size = size.to(device=pos.device, dtype=pos.dtype)
+        elif isinstance(size, (list,tuple)):
+            size = [float(v) for v in size]
+
+        cluster = voxel_grid(pos, batch=batch, size=size)
         x, _ = max_pool_x(cluster, x, batch, size=self.size)
         return x
 
