@@ -18,7 +18,7 @@ class RecognitionModel(pl.LightningModule):
         self.scheduler_kwargs = {"T_max":max_epochs, "eta_min":eta_min}
 
         self.num_outputs = num_classes
-        self.dim = dim
+        self.dim = dim #position and edge_attr dimension
 
         model_input_shape = torch.tensor(img_shape + (dim, ), device=self.device)
         self.model = model_by_name(network)(dataset, model_input_shape, num_outputs=num_classes, **model_kwargs)
@@ -56,6 +56,12 @@ class RecognitionModel(pl.LightningModule):
     def configure_optimizers(self):
         optimizer = torch.optim.Adam(self.parameters(), **self.optimizer_kwargs)
         lr_scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, **self.scheduler_kwargs)
-        return [optimizer], [lr_scheduler]
-
-
+        
+        return {
+        "optimizer": optimizer,
+        "lr_scheduler": {
+            "scheduler": lr_scheduler,
+            "interval": "epoch",
+            "frequency": 1,
+        },
+    }
