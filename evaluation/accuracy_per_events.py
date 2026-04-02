@@ -5,7 +5,7 @@ import os
 import numpy as np
 import pandas as pd
 import torch
-import pytorch_lightning.metrics.functional as pl_metrics
+import lightning.pytorch.metrics.functional as pl_metrics
 
 from torch_geometric.data import Batch
 from torch_geometric.utils import subgraph

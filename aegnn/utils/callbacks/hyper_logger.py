@@ -1,8 +1,10 @@
 import argparse
-import pytorch_lightning as pl
+import lightning.pytorch as pl
+
+from lightning.pytorch.callbacks import Callback
 
 
-class PHyperLogger(pl.callbacks.base.Callback):
+class PHyperLogger(Callback):
     """
 
     Args:

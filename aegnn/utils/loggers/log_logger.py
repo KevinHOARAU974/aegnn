@@ -3,11 +3,11 @@ import logging
 import os
 import time
 
-from pytorch_lightning.loggers import LightningLoggerBase
+from lightning.pytorch.loggers.logger import Logger 
 from typing import Dict, Optional, Any
 
 
-class LoggingLogger(LightningLoggerBase):
+class LoggingLogger(Logger):
 
     def __init__(self, save_dir: Optional[str], name: Optional[str] = "default", version: Optional[str] = None,
                  log_level: int = logging.INFO, sub_dir: Optional[str] = None, **kwargs):

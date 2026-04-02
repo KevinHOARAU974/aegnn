@@ -2,7 +2,7 @@ import abc
 import argparse
 import logging
 import os
-import pytorch_lightning as pl
+import lightning.pytorch as pl
 import torch
 import torch.utils.data
 import torch_geometric

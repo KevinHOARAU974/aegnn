@@ -3,16 +3,16 @@ import logging
 import numpy as np
 import torch
 import torch_geometric
-import pytorch_lightning as pl
-import pytorch_lightning.loggers
+import lightning.pytorch as pl
+import lightning.pytorch.loggers
 import wandb
 
 from typing import Any, Dict, List
 from wandb.wandb_run import Run as WandBRun
 from aegnn.visualize.utils.histogram import compute_histogram
+from lightning.pytorch.callbacks import Callback
 
-
-class BBoxLogger(pl.callbacks.base.Callback):
+class BBoxLogger(Callback):
 
     def __init__(self, classes: List[str], max_num_images: int = 4, padding: int = 50):
         self.classes = np.array(classes)
@@ -21,7 +21,7 @@ class BBoxLogger(pl.callbacks.base.Callback):
 
         self.__batch_w_outputs = None
 
-    def on_validation_batch_end(self, trainer, model, outputs: Any, batch, batch_idx: int, dataloader_idx: int) -> None:
+    def on_validation_batch_end(self, trainer, model, outputs: Any, batch, batch_idx: int, dataloader_idx=0) -> None:
         if batch_idx > 0:
             return
         logging.debug("Current model outputs cached for bounding box logging")

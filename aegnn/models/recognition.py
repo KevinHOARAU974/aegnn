@@ -1,11 +1,11 @@
 import torch
 import torch_geometric
-import pytorch_lightning as pl
-import pytorch_lightning.metrics.functional as pl_metrics
+import lightning.pytorch as pl
 
 from torch.nn.functional import softmax
 from typing import Tuple
 from .networks import by_name as model_by_name
+from torchmetrics.functional import accuracy
 
 
 class RecognitionModel(pl.LightningModule):
@@ -36,8 +36,8 @@ class RecognitionModel(pl.LightningModule):
         loss = self.criterion(outputs, target=batch.y)
 
         y_prediction = torch.argmax(outputs, dim=-1)
-        accuracy = pl_metrics.accuracy(preds=y_prediction, target=batch.y)
-        self.logger.log_metrics({"Train/loss": loss, "Train/Accuracy": accuracy}, step=self.trainer.global_step)
+        training_accuracy = accuracy(preds=y_prediction, target=batch.y, task="multiclass", num_classes=self.num_outputs)
+        self.logger.log_metrics({"Train/loss": loss, "Train/Accuracy": training_accuracy}, step=self.trainer.global_step)
 
         return loss
     
@@ -48,9 +48,9 @@ class RecognitionModel(pl.LightningModule):
         predictions = softmax(outputs, dim=-1)
 
         self.log("Val/Loss", self.criterion(outputs, target=batch.y))
-        self.log("Val/Accuracy", pl_metrics.accuracy(preds=y_prediction, target=batch.y))
+        self.log("Val/Accuracy", accuracy(preds=y_prediction, target=batch.y, task="multiclass", num_classes=self.num_outputs))
         k = min(3, self.num_outputs - 1)
-        self.log(f"Val/Accuracy_Top{k}", pl_metrics.accuracy(preds=predictions, target=batch.y))
+        self.log(f"Val/Accuracy_Top{k}", accuracy(preds=predictions, target=batch.y,  task="multiclass", num_classes=self.num_outputs))
         return predictions
     
     def configure_optimizers(self):

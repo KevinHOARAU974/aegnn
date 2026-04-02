@@ -4,7 +4,7 @@ import logging
 import numpy as np
 import torch
 import torch_geometric
-import pytorch_lightning as pl
+import lightning.pytorch as pl
 
 from typing import Dict, Tuple
 
