@@ -30,6 +30,10 @@ class EventDataModule(pl.LightningDataModule):
         self.val_dataset = None
         self.transform = transform
 
+    @classmethod
+    def from_cfg(cls, cfg):
+        return cls(**cfg)
+
     def prepare_data(self) -> None:
         logging.info("Preparing datasets for loading")
         self._prepare_dataset("training")

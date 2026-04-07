@@ -28,17 +28,19 @@ class RecognitionModel(pl.LightningModule):
         data.edge_attr = data.edge_attr[:, :self.dim]
         return self.model.forward(data)
     
+
     ### Training with Pytorch Lightning
 
     def training_step(self, batch : torch_geometric.data.Batch, batch_idx : int) :
 
         outputs = self.forward(batch)
         loss = self.criterion(outputs, target=batch.y)
+        batch_size = int(batch.batch.max().item() + 1)
 
         y_prediction = torch.argmax(outputs, dim=-1)
         training_accuracy = accuracy(preds=y_prediction, target=batch.y, task="multiclass", num_classes=self.num_outputs)
-        self.logger.log_metrics({"Train/loss": loss, "Train/Accuracy": training_accuracy}, step=self.trainer.global_step)
-
+        self.log("Train/loss", loss, on_step=True, on_epoch=True, batch_size=batch_size,  prog_bar=True)
+        self.log("Train/Accuracy", training_accuracy, on_step=True, on_epoch=True, batch_size=batch_size, prog_bar=True)
         return loss
     
     def validation_step(self, batch: torch_geometric.data.Batch, batch_idx: int) -> torch.Tensor:
@@ -47,10 +49,12 @@ class RecognitionModel(pl.LightningModule):
         y_prediction = torch.argmax(outputs, dim=-1)
         predictions = softmax(outputs, dim=-1)
 
-        self.log("Val/Loss", self.criterion(outputs, target=batch.y))
-        self.log("Val/Accuracy", accuracy(preds=y_prediction, target=batch.y, task="multiclass", num_classes=self.num_outputs))
+        batch_size = int(batch.batch.max().item() + 1)
+
+        self.log("Val/loss", self.criterion(outputs, target=batch.y), on_step=False, on_epoch=True, batch_size=batch_size, prog_bar=True)
+        self.log("Val/Accuracy", accuracy(preds=y_prediction, target=batch.y, task="multiclass", num_classes=self.num_outputs), on_step=False, on_epoch=True, batch_size=batch_size, prog_bar=True)
         k = min(3, self.num_outputs - 1)
-        self.log(f"Val/Accuracy_Top{k}", accuracy(preds=predictions, target=batch.y,  task="multiclass", num_classes=self.num_outputs))
+        self.log(f"Val/Accuracy_Top{k}", accuracy(preds=predictions, target=batch.y,  task="multiclass", num_classes=self.num_outputs), on_step=False, on_epoch=True, batch_size=batch_size, prog_bar=True)
         return predictions
     
     def configure_optimizers(self):
