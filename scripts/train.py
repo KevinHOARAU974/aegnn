@@ -65,7 +65,7 @@ def main() -> None:
     loggers = []
     loggers.append(wandb_logger)
 
-    checkpoint_path = os.path.join(cfg["log_dir"], "checkpoints", cfg["dataset"], cfg["task"], experiment_name)
+    checkpoint_path = os.path.expanduser(os.path.join(cfg["log_dir"], "checkpoints", cfg["dataset"], cfg["task"], experiment_name))
     Path(checkpoint_path).mkdir(parents=True,exist_ok=True)
 
     callbacks = [
