@@ -59,7 +59,7 @@ class NCars(NCaltech101):
         return glob.glob(os.path.join(self.root, mode, "*"))
 
     def processed_files(self, mode: str) -> List[str]:
-        processed_dir = os.path.join(self.root, "processed")
+        processed_dir = os.path.expanduser(os.path.join(self.root, "processed"))
         return glob.glob(os.path.join(processed_dir, mode, "*"))
 
     @property
