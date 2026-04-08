@@ -54,13 +54,13 @@ class NCars(NCaltech101):
     # Files #################################################################################################
     #########################################################################################################
     def raw_files(self, mode: str) -> List[str]:
-        lep = os.path.join(self.root, mode, "*")
-        print(f"je vaius chercher ici: {lep}")
+        lep = os.path.expanduser(os.path.join(self.root, mode, "*"))
+        # print(f"je vaius chercher ici: {lep}")
         return glob.glob(os.path.join(self.root, mode, "*"))
 
     def processed_files(self, mode: str) -> List[str]:
         processed_dir = os.path.expanduser(os.path.join(self.root, "processed"))
-        print(f'processed_dir : {processed_dir}')
+        # print(f'processed_dir : {processed_dir}')
         return glob.glob(os.path.join(processed_dir, mode, "*"))
 
     @property

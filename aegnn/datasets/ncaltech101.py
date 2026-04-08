@@ -26,7 +26,7 @@ class NCaltech101(EventDataModule):
         self.save_hyperparameters({"preprocessing": pre_processing_params})
 
     def read_annotations(self, raw_file: str) -> Optional[np.ndarray]:
-        annotations_dir = os.path.join(os.environ["AEGNN_DATA_DIR"], "ncaltech101", "annotations")
+        annotations_dir = os.path.expanduser(os.path.join(os.environ["AEGNN_DATA_DIR"], "ncaltech101", "annotations"))
         raw_file_name = os.path.basename(raw_file).replace("image", "annotation")
         raw_dir_name = os.path.basename(os.path.dirname(raw_file))
         annotation_file = os.path.join(os.path.join(annotations_dir, raw_dir_name, raw_file_name))
@@ -89,7 +89,7 @@ class NCaltech101(EventDataModule):
     # Processing ############################################################################################
     #########################################################################################################
     def _prepare_dataset(self, mode: str):
-        processed_dir = os.path.join(self.root, "processed")
+        processed_dir = os.path.expanduser(os.path.join(self.root, "processed"))
         raw_files = self.raw_files(mode)
         print(f'RAW FILer length {len(raw_files)}')
         class_dict = {class_id: i for i, class_id in enumerate(self.classes)}
@@ -171,12 +171,12 @@ class NCaltech101(EventDataModule):
     # Files #################################################################################################
     #########################################################################################################
     def raw_files(self, mode: str) -> List[str]:
-        return glob.glob(os.path.join(self.root, mode, "*", "*.bin"), recursive=True)
+        return glob.glob(os.path.expanduser(os.path.join(self.root, mode, "*", "*.bin"), recursive=True))
 
     def processed_files(self, mode: str) -> List[str]:
-        processed_dir = os.path.join(self.root, "processed")
+        processed_dir = os.path.expanduser(os.path.join(self.root, "processed"))
         return glob.glob(os.path.join(processed_dir, mode, "*", "*.bin"))
 
     @property
     def classes(self) -> List[str]:
-        return os.listdir(os.path.join(self.root, "raw"))
+        return os.listdir(os.path.expanduser(os.path.join(self.root, "raw")))

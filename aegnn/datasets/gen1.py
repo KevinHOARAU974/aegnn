@@ -45,7 +45,7 @@ class Gen1(EventDataModule):
         labels = np.array(read_label(bounding_boxes))
 
         for i, bbox in enumerate(bounding_boxes):
-            processed_dir = os.path.join(root, "processed")
+            processed_dir = os.path.expanduser(os.path.join(root, "processed"))
             processed_file = rf.replace(root, processed_dir).replace(".dat", f"{i}.pkl")
             if os.path.exists(processed_file):
                 continue
@@ -147,10 +147,10 @@ class Gen1(EventDataModule):
     # Files #################################################################################################
     #########################################################################################################
     def raw_files(self, mode: str) -> List[str]:
-        return glob.glob(os.path.join(self.root, mode, "*_td.dat"))
+        return glob.glob(os.path.expanduser(os.path.join(self.root, mode, "*_td.dat")))
 
     def processed_files(self, mode: str) -> List[str]:
-        processed_dir = os.path.join(self.root, "processed")
+        processed_dir = os.path.expanduser(os.path.join(self.root, "processed"))
         return glob.glob(os.path.join(processed_dir, mode, "*.pkl"))
 
     def _total_bbox_count(self, raw_files: List[str]) -> int:

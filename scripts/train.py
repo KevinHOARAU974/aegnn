@@ -59,6 +59,8 @@ def main() -> None:
     wandb_logger = WandbLogger(project="aegnn",
                         #    groupe = "ncars",
                            name=f"{project}_{experiment_name}")
+    
+    wandb_logger.experiment.config.update(cfg)
 
     loggers = []
     loggers.append(wandb_logger)
