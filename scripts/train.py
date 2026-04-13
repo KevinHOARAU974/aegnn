@@ -62,6 +62,10 @@ def main() -> None:
                            name=f"{project}_{experiment_name}")
     
     wandb_logger.experiment.config.update(cfg)
+    wandb_logger.experiment.config.update(aegnn.utils.git.get_git_info())
+    wandb_logger.experiment.config.update({"git_dirty":aegnn.utils.git.is_dirty()})
+
+    print(aegnn.utils.git.get_git_info())
 
     wandb_logger.experiment.define_metric("epoch")
     wandb_logger.experiment.define_metric("*", step_metric="epoch")

@@ -4,3 +4,4 @@ from aegnn.utils.multiprocessing import TaskManager
 
 import aegnn.utils.callbacks
 import aegnn.utils.loggers
+import aegnn.utils.git
