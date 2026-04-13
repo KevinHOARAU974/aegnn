@@ -8,6 +8,7 @@ import yaml
 
 from pathlib import Path
 from lightning.pytorch.loggers import WandbLogger
+from lightning.pytorch.callbacks import ModelCheckpoint, EarlyStopping, LearningRateMonitor, TQDMProgressBar
 
 import os
 
@@ -49,7 +50,7 @@ def main() -> None:
                                       bias = True,
                                       root_weight = True, 
                                       **cfg["model_params"])
-    print("model créé")
+    # print("model créé")
 
     project = f"aegnn-{cfg['dataset']}-{cfg['task']}"
     experiment_name = datetime.datetime.now().strftime("%Y%m%d%H%M%S")
@@ -62,19 +63,46 @@ def main() -> None:
     
     wandb_logger.experiment.config.update(cfg)
 
+    wandb_logger.experiment.define_metric("epoch")
+    wandb_logger.experiment.define_metric("*", step_metric="epoch")
+
     loggers = []
     loggers.append(wandb_logger)
 
     checkpoint_path = os.path.expanduser(os.path.join(cfg["log_dir"], "checkpoints", cfg["dataset"], cfg["task"], experiment_name))
     Path(checkpoint_path).mkdir(parents=True,exist_ok=True)
 
+
+    #Callbacks
+
+    #Save best and last model 
+    checkpoint_callback = ModelCheckpoint(
+        dirpath=checkpoint_path,
+        filename="best-{epoch:02d}-{val_loss:.4f}",
+        monitor="Val/loss",
+        mode='min',
+        save_top_k=1,
+        save_last=True,
+        auto_insert_metric_name=False
+    )
+
+    #Early Stopping
+    early_stopping = EarlyStopping(
+        monitor="Val/loss",
+        patience=10,
+        mode='min',
+        verbose=True
+    )
+
+    lr_monitor = LearningRateMonitor(logging_interval="epoch")
+
+    progress_bar =TQDMProgressBar(refresh_rate=1)
+
     callbacks = [
-        pl.callbacks.LearningRateMonitor(),
-        aegnn.utils.callbacks.BBoxLogger(classes=data_module.classes),
-        # aegnn.utils.callbacks.PHyperLogger(args),
-        aegnn.utils.callbacks.EpochLogger(),
-        aegnn.utils.callbacks.FileLogger([model, model.model, data_module]),
-        aegnn.utils.callbacks.FullModelCheckpoint(dirpath=checkpoint_path)
+        checkpoint_callback,
+        early_stopping,
+        lr_monitor,
+        progress_bar
     ]
 
     #Training

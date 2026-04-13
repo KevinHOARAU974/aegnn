@@ -55,7 +55,7 @@ class EventDataModule(pl.LightningDataModule):
                                            shuffle=self.shuffle, pin_memory=self.pin_memory)
 
     def val_dataloader(self, num_workers: int = 2) -> torch.utils.data.DataLoader:
-        return torch.utils.data.DataLoader(self.val_dataset, self.batch_size, num_workers=num_workers,
+        return torch.utils.data.DataLoader(self.val_dataset, self.batch_size, num_workers=self.num_workers, pin_memory=self.pin_memory,
                                            collate_fn=self.collate_fn, shuffle=False)
 
     #########################################################################################################

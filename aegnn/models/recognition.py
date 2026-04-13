@@ -39,23 +39,21 @@ class RecognitionModel(pl.LightningModule):
 
         y_prediction = torch.argmax(outputs, dim=-1)
         training_accuracy = accuracy(preds=y_prediction, target=batch.y, task="multiclass", num_classes=self.num_outputs)
-        self.log("Train/loss", loss, on_step=True, on_epoch=True, batch_size=batch_size,  prog_bar=True)
-        self.log("Train/Accuracy", training_accuracy, on_step=True, on_epoch=True, batch_size=batch_size, prog_bar=True)
+        self.log("Train/loss", loss, on_step=False, on_epoch=True, batch_size=batch_size,  prog_bar=True)
+        self.log("Train/Accuracy", training_accuracy, on_step=False, on_epoch=True, batch_size=batch_size, prog_bar=True)
         return loss
     
     def validation_step(self, batch: torch_geometric.data.Batch, batch_idx: int) -> torch.Tensor:
 
         outputs = self.forward(batch)
-        y_prediction = torch.argmax(outputs, dim=-1)
-        predictions = softmax(outputs, dim=-1)
 
-        batch_size = int(batch.batch.max().item() + 1)
+        batch_size = batch.num_graphs
 
         self.log("Val/loss", self.criterion(outputs, target=batch.y), on_step=False, on_epoch=True, batch_size=batch_size, prog_bar=True)
-        self.log("Val/Accuracy", accuracy(preds=y_prediction, target=batch.y, task="multiclass", num_classes=self.num_outputs), on_step=False, on_epoch=True, batch_size=batch_size, prog_bar=True)
+        self.log("Val/Accuracy", accuracy(preds=outputs, target=batch.y, task="multiclass", num_classes=self.num_outputs), on_step=False, on_epoch=True, batch_size=batch_size, prog_bar=True)
         k = min(3, self.num_outputs - 1)
-        self.log(f"Val/Accuracy_Top{k}", accuracy(preds=predictions, target=batch.y,  task="multiclass", num_classes=self.num_outputs), on_step=False, on_epoch=True, batch_size=batch_size, prog_bar=True)
-        return predictions
+        self.log(f"Val/Accuracy_Top{k}", accuracy(preds=outputs, target=batch.y,  task="multiclass", num_classes=self.num_outputs, top_k=k), on_step=False, on_epoch=True, batch_size=batch_size, prog_bar=True)
+        # return predictions 
     
     def configure_optimizers(self):
         optimizer = torch.optim.Adam(self.parameters(), **self.optimizer_kwargs)
