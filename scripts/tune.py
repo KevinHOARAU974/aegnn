@@ -27,8 +27,8 @@ def objective(trial: optuna.Trial, base_cfg):
     cfg = copy.deepcopy(base_cfg)
 
     #Optuna
-    cfg["model_params"]["lr"] = trial.suggest_float("lr", 1e-4, 5e-3, log=True)
-    cfg["model_params"]["weight_decay"] = trial.suggest_float("weight_decay", 1e-6, 1e-3, log=True)
+    cfg["model_params"]["lr"] = trial.suggest_float("lr", float(cfg['optuna_params']["lr_min"]), float(cfg['optuna_params']["lr_max"]), log=True)
+    cfg["model_params"]["weight_decay"] = trial.suggest_float("weight_decay", float(cfg['optuna_params']["wd_min"]), float(cfg['optuna_params']["wd_max"]), log=True)
 
     pl.seed_everything(cfg["seed"], workers=True)
 
@@ -68,7 +68,7 @@ def objective(trial: optuna.Trial, base_cfg):
     #Early Stopping
     early_stopping = EarlyStopping(
         monitor="Val/loss",
-        patience=5,
+        patience=cfg['callback_params']['patience'],
         mode='min',
         verbose=True
     )
@@ -95,9 +95,9 @@ def objective(trial: optuna.Trial, base_cfg):
     
     trainer.fit(model, datamodule=data_module)
 
-    metric = trainer.callback_metrics.get("Val/Accuracy")
+    metric = trainer.callback_metrics.get(cfg["optuna_params"]["criteria"])
     if metric is None:
-        raise RuntimeError("Val/Accuracy not find")
+        raise RuntimeError(f"{cfg['optuna_params']['criteria']} not find")
     
     return float(metric.cpu().item())
 
@@ -119,8 +119,8 @@ if __name__ == "__main__":
 
     objective_fn = partial(objective, base_cfg=base_cfg)
 
-    study = optuna.create_study(direction="maximize")
-    study.optimize(objective_fn, n_trials=1)
+    study = optuna.create_study(direction=base_cfg["optuna_params"]["direction"])
+    study.optimize(objective_fn, n_trials=base_cfg["optuna_params"]["n_trials"])
 
     print("Best trial:")
     print(study.best_trial.number)
@@ -131,9 +131,9 @@ if __name__ == "__main__":
     cfg["model_params"]["lr"] = study.best_trial.params["lr"]
     cfg["model_params"]["weight_decay"] = study.best_trial.params["weight_decay"]
 
-    project = f"aegnn-{cfg['dataset']}-{cfg['task']}-optuna"
+    project = f"{cfg['project_name']}-{cfg['dataset']}-{cfg['task']}"
 
-    wandb_logger = WandbLogger(project="aegnn",
+    wandb_logger = WandbLogger(project=cfg["project_name"],
                         #    groupe = "ncars",
                            name=f"{project}_best_trial")
     
