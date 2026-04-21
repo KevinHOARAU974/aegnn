@@ -1,31 +1,39 @@
 import argparse
 import lightning.pytorch as pl
 import torch
+import yaml
+import os
 
 import aegnn
 
-
-def parse_args():
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--seed", default=12345, type=int)
-    parser.add_argument("--debug", action="store_true")
-    parser.add_argument("--gpu", default=None, type=int)
-    parser = aegnn.datasets.EventDataModule.add_argparse_args(parser)
-    return parser.parse_args()
-
+def load_config(config_path: str) -> dict:
+    with open(config_path, "r", encoding="utf-8") as f:
+        return yaml.safe_load(f)
 
 if __name__ == '__main__':
-    args = parse_args()
-    if args.debug:
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "--config",
+        type=str,
+        required=True,
+        help="Path to YAML config file",
+    )
+    args = parser.parse_args()
+
+    cfg = load_config(args.config)
+
+    os.environ["AEGNN_DATA_DIR"] = cfg["data_dir"]
+    print(os.environ["AEGNN_DATA_DIR"])
+
+    if cfg['debug']:
         aegnn.utils.loggers.LoggingLogger(None, name="debug")
 
-    if torch.cuda.is_available():
-        if args.gpu is not None:
-            torch.cuda.set_device(args.gpu)
-        if args.num_workers > 1:
+    if torch.cuda.is_available() and cfg['data_params']['num_workers'] > 1:
             torch.multiprocessing.set_start_method("spawn")
-    pl.seed_everything(args.seed)
+    pl.seed_everything(cfg['seed'])
 
-    dm = aegnn.datasets.by_name(args.dataset).from_argparse_args(args)
-    # print('Jai fini dinstancier!!')
+    dm_class = aegnn.datasets.by_name(cfg['dataset'])
+
+    dm = dm_class(cfg["data_params"])
     dm.prepare_data()

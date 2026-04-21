@@ -115,7 +115,7 @@ class NCaltech101(EventDataModule):
         rf_wo_ext, _ = os.path.splitext(rf)
 
         # Load data from raw file. If the according loaders are available, add annotation, label and class id.
-        device = "cpu"  # torch.device(torch.cuda.current_device())
+        device = "cuda" if torch.cuda.is_available() else "cpu" # torch.device(torch.cuda.current_device())
         data_obj = load_func(rf).to(device)
         data_obj.file_id = os.path.basename(rf)
         if (label := read_label(rf)) is not None:
@@ -142,8 +142,9 @@ class NCaltech101(EventDataModule):
         t = data.pos[data.num_nodes // 2, 2]
         index1 = torch.clamp(torch.searchsorted(data.pos[:, 2].contiguous(), t) - 1, 0, data.num_nodes - 1)
         index0 = torch.clamp(torch.searchsorted(data.pos[:, 2].contiguous(), t-window_us) - 1, 0, data.num_nodes - 1)
+        num_nodes = data.num_nodes
         for key, item in data:
-            if torch.is_tensor(item) and item.size(0) == data.num_nodes and item.size(0) != 1:
+            if torch.is_tensor(item) and item.size(0) == num_nodes and item.size(0) != 1:
                 data[key] = item[index0:index1, :]
 
         # Coarsen graph by uniformly sampling n points from the event point cloud.
@@ -171,7 +172,7 @@ class NCaltech101(EventDataModule):
     # Files #################################################################################################
     #########################################################################################################
     def raw_files(self, mode: str) -> List[str]:
-        return glob.glob(os.path.expanduser(os.path.join(self.root, mode, "*", "*.bin"), recursive=True))
+        return glob.glob(os.path.expanduser(os.path.join(self.root, mode, "*", "*.bin")), recursive=True)
 
     def processed_files(self, mode: str) -> List[str]:
         processed_dir = os.path.expanduser(os.path.join(self.root, "processed"))
@@ -179,4 +180,4 @@ class NCaltech101(EventDataModule):
 
     @property
     def classes(self) -> List[str]:
-        return os.listdir(os.path.expanduser(os.path.join(self.root, "raw")))
+        return os.listdir(os.path.expanduser(os.path.join(self.root, "training")))
