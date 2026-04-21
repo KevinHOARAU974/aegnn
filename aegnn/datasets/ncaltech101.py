@@ -25,6 +25,8 @@ class NCaltech101(EventDataModule):
         pre_processing_params = {"r": 5.0, "d_max": 32, "n_samples": 25000, "sampling": True}
         self.save_hyperparameters({"preprocessing": pre_processing_params})
 
+        self.dims = (240,180)
+
     def read_annotations(self, raw_file: str) -> Optional[np.ndarray]:
         annotations_dir = os.path.expanduser(os.path.join(os.environ["AEGNN_DATA_DIR"], "ncaltech101", "annotations"))
         raw_file_name = os.path.basename(raw_file).replace("image", "annotation")
