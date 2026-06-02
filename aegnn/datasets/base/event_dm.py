@@ -38,11 +38,13 @@ class EventDataModule(pl.LightningDataModule):
         logging.info("Preparing datasets for loading")
         self._prepare_dataset("training")
         self._prepare_dataset("validation")
+        self._prepare_dataset("test")
 
     def setup(self, stage: Optional[str] = None):
         logging.debug("Load and set up datasets")
         self.train_dataset = self._load_dataset("training")
         self.val_dataset = self._load_dataset("validation")
+        self.test_dataset = self._load_dataset("test")
         if len(self.train_dataset) == 0 or len(self.val_dataset) == 0:
             raise UserWarning("No data found, check AEGNN_DATA_DIR environment variable!")
 
@@ -56,6 +58,10 @@ class EventDataModule(pl.LightningDataModule):
 
     def val_dataloader(self, num_workers: int = 2) -> torch.utils.data.DataLoader:
         return torch.utils.data.DataLoader(self.val_dataset, self.batch_size, num_workers=self.num_workers, pin_memory=self.pin_memory,
+                                           collate_fn=self.collate_fn, shuffle=False)
+    
+    def test_dataloader(self):
+        return torch.utils.data.DataLoader(self.test_dataset, self.batch_size, num_workers=self.num_workers, pin_memory=self.pin_memory,
                                            collate_fn=self.collate_fn, shuffle=False)
 
     #########################################################################################################
