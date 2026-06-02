@@ -90,7 +90,7 @@ def training(cfg):
         dirpath=checkpoint_path,
         filename="best-{epoch:02d}-{val_loss:.4f}",
         monitor="Val/Accuracy",
-        mode='min',
+        mode='max',
         save_top_k=1,
         save_last=True,
         auto_insert_metric_name=False
@@ -100,7 +100,7 @@ def training(cfg):
     early_stopping = EarlyStopping(
         monitor="Val/Accuracy",
         patience=cfg['callback_params']['patience'],
-        mode='min',
+        mode='max',
         verbose=True
     )
 
