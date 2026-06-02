@@ -89,7 +89,7 @@ def training(cfg):
     checkpoint_callback = ModelCheckpoint(
         dirpath=checkpoint_path,
         filename="best-{epoch:02d}-{val_loss:.4f}",
-        monitor="Val/loss",
+        monitor="Val/Accuracy",
         mode='min',
         save_top_k=1,
         save_last=True,
@@ -98,7 +98,7 @@ def training(cfg):
 
     #Early Stopping
     early_stopping = EarlyStopping(
-        monitor="Val/loss",
+        monitor="Val/Accuracy",
         patience=cfg['callback_params']['patience'],
         mode='min',
         verbose=True

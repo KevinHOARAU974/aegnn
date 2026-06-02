@@ -11,9 +11,9 @@ from torchmetrics.functional import accuracy
 class RecognitionModel(pl.LightningModule):
 
     def __init__(self, network, dataset: str, num_classes, img_shape: Tuple[int, int],
-                 dim: int = 3, lr= 1e-3, weight_decay = 5e-3, eta_min = 0.0, max_epochs = 100,  **model_kwargs):
+                 dim: int = 3, lr= 1e-3, weight_decay = 5e-3, eta_min = 0.0, max_epochs = 100, label_smoothing=0.1,  **model_kwargs):
         super(RecognitionModel, self).__init__()
-        self.criterion = torch.nn.CrossEntropyLoss()
+        self.criterion = torch.nn.CrossEntropyLoss(label_smoothing=label_smoothing)
         self.optimizer_kwargs = {"lr":lr, "weight_decay":weight_decay}
         self.scheduler_kwargs = {"T_max":max_epochs, "eta_min":eta_min}
 
