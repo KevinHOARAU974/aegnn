@@ -86,6 +86,8 @@ class GraphRes(torch.nn.Module):
 
         self.fm_to_pool_x = Data(x=x_f, pos=data_pooled.pos, batch=data_pooled.batch, edge_index=data_pooled.edge_index, edge_attr=data_pooled.edge_attr)
         x = self.pool7(x_f, pos=data_pooled.pos[:, :2], batch=data_pooled.batch)
-        x = x.view(-1, self.fc.in_features)
+
+        x = x.reshape(data.num_graphs, -1)
+
         self.feature_map = x
         return self.fc(x)

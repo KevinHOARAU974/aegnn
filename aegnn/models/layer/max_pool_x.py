@@ -2,6 +2,7 @@ import torch
 
 from torch_geometric.data import Data
 from torch_geometric.nn.pool import max_pool_x, voxel_grid
+from torch_geometric.nn.pool.consecutive import consecutive_cluster
 from typing import List, Optional, Tuple, Union
 
 
@@ -27,6 +28,27 @@ class MaxPoolingX(torch.nn.Module):
             size = [float(v) for v in size]
 
         cluster = voxel_grid(pos, batch=batch, size=size)
+
+        max_index = 0
+
+        if batch is not None:
+
+            cluster_fixed = torch.empty_like(cluster)
+
+            for gid in batch.unique():
+
+                mask = batch == gid
+                c_local, _ = consecutive_cluster(cluster[mask])
+
+                cluster_fixed[mask] = c_local + max_index
+
+                max_index += c_local.max().item() + 1
+            
+            cluster = cluster_fixed
+        
+        else:
+            cluster, _ = consecutive_cluster(cluster)
+
         x, _ = max_pool_x(cluster, x, batch, size=self.size)
         return x
 

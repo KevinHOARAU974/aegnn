@@ -35,10 +35,10 @@ class RecognitionModel(pl.LightningModule):
 
         outputs = self.forward(batch)
         loss = self.criterion(outputs, target=batch.y)
-        batch_size = int(batch.batch.max().item() + 1)
+        batch_size = batch.num_graphs
 
-        y_prediction = torch.argmax(outputs, dim=-1)
-        training_accuracy = accuracy(preds=y_prediction, target=batch.y, task="multiclass", num_classes=self.num_outputs)
+        # y_prediction = torch.argmax(outputs, dim=-1)
+        training_accuracy = accuracy(preds=outputs, target=batch.y, task="multiclass", num_classes=self.num_outputs)
         self.log("Train/loss", loss, on_step=False, on_epoch=True, batch_size=batch_size,  prog_bar=True)
         self.log("Train/Accuracy", training_accuracy, on_step=False, on_epoch=True, batch_size=batch_size, prog_bar=True)
         return loss
