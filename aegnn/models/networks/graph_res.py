@@ -47,7 +47,7 @@ class GraphRes(torch.nn.Module):
 
         self.conv5 = SplineConv(n[4], n[5], dim=dim, kernel_size=kernel_size, bias=bias, root_weight=root_weight)
         self.norm5 = BatchNorm(in_channels=n[5])
-        self.pool5 = MaxPooling(pooling_size, transform=Cartesian(norm=True, cat=False))
+        self.pool5 = MaxPooling(pooling_size, transform=Cartesian(norm=True, cat=False), start = [0., 0.], end= input_shape[:2]-1)
 
         self.conv6 = SplineConv(n[5], n[6], dim=dim, kernel_size=kernel_size, bias=bias, root_weight=root_weight)
         self.norm6 = BatchNorm(in_channels=n[6])

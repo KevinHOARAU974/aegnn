@@ -20,6 +20,18 @@ class MaxPooling(torch.nn.Module):
                 ) -> Union[Tuple[torch.Tensor, torch.Tensor, torch.LongTensor, torch.Tensor, torch.Tensor], Data]:
         assert edge_index is not None, "edge_index must not be None"
 
+        if batch is not None:
+            batch = batch.long()
+
+        if torch.is_tensor(self.voxel_size):
+            self.voxel_size = self.voxel_size.to(device=pos.device, dtype=pos.dtype)
+        
+        if torch.is_tensor(self.start):
+            self.start = self.start.to(device=pos.device, dtype=pos.dtype)
+
+        if torch.is_tensor(self.end):
+            self.end = self.end.to(device=pos.device, dtype=pos.dtype)
+
         cluster = voxel_grid(pos[:, :2], batch=batch, size=self.voxel_size, start=self.start, end= self.end)
         data = Data(x=x, pos=pos, edge_index=edge_index, batch=batch)
         data = max_pool(cluster, data=data, transform=self.transform)  # transform for new edge attributes
