@@ -1,5 +1,6 @@
 import torch
 
+from torch import Tensor
 from torch_geometric.data import Data
 from torch_geometric.nn.pool import max_pool_x, voxel_grid
 from torch_geometric.nn.pool.consecutive import consecutive_cluster
@@ -8,10 +9,12 @@ from typing import List, Optional, Tuple, Union
 
 class MaxPoolingX(torch.nn.Module):
 
-    def __init__(self, voxel_size: List[int], size: int):
+    def __init__(self, voxel_size: List[int], size: int, start: Optional[Union[float, List[float], Tensor]] = None, end: Optional[Union[float, List[float], Tensor]] = None):
         super(MaxPoolingX, self).__init__()
         self.voxel_size = voxel_size
         self.size = size
+        self.start = start
+        self.end = end
 
     def forward(self, x: torch.Tensor, pos: torch.Tensor, batch: Optional[torch.Tensor] = None
                 ) -> Union[Tuple[torch.Tensor, torch.Tensor, torch.LongTensor, torch.Tensor, torch.Tensor], Data]:
@@ -20,34 +23,18 @@ class MaxPoolingX(torch.nn.Module):
 
         if batch is not None:
             batch = batch.long()
+
+        if torch.is_tensor(self.voxel_size):
+            self.voxel_size = self.voxel_size.to(device=pos.device, dtype=pos.dtype)
         
-        size = self.voxel_size
-        if torch.is_tensor(size):
-            size = size.to(device=pos.device, dtype=pos.dtype)
-        elif isinstance(size, (list,tuple)):
-            size = [float(v) for v in size]
+        if torch.is_tensor(self.start):
+            self.start = self.start.to(device=pos.device, dtype=pos.dtype)
 
-        cluster = voxel_grid(pos, batch=batch, size=size)
-
-        max_index = 0
-
-        if batch is not None:
-
-            cluster_fixed = torch.empty_like(cluster)
-
-            for gid in batch.unique():
-
-                mask = batch == gid
-                c_local, _ = consecutive_cluster(cluster[mask])
-
-                cluster_fixed[mask] = c_local + max_index
-
-                max_index += c_local.max().item() + 1
-            
-            cluster = cluster_fixed
+        if torch.is_tensor(self.end):
+            self.end = self.end.to(device=pos.device, dtype=pos.dtype)
         
-        else:
-            cluster, _ = consecutive_cluster(cluster)
+        # print(f"device end: {self.end}")
+        cluster = voxel_grid(pos, batch=batch, size=self.voxel_size, start=self.start, end=self.end)
 
         x, _ = max_pool_x(cluster, x, batch, size=self.size)
         return x

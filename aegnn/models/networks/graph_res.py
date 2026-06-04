@@ -54,7 +54,7 @@ class GraphRes(torch.nn.Module):
         self.conv7 = SplineConv(n[6], n[7], dim=dim, kernel_size=kernel_size, bias=bias, root_weight=root_weight)
         self.norm7 = BatchNorm(in_channels=n[7])
 
-        self.pool7 = MaxPoolingX(input_shape[:2] // 4, size=16)
+        self.pool7 = MaxPoolingX(input_shape[:2] // 4, size=16, start = [0., 0.], end= input_shape[:2]-1)
         self.fc = Linear(pooling_outputs * 16, out_features=num_outputs, bias=bias)
 
     def forward(self, data: torch_geometric.data.Batch) -> torch.Tensor:
