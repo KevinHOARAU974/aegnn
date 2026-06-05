@@ -11,11 +11,14 @@ from torchmetrics.functional import accuracy
 class RecognitionModel(pl.LightningModule):
 
     def __init__(self, network, dataset: str, num_classes, img_shape: Tuple[int, int],
-                 dim: int = 3, lr= 1e-3, weight_decay = 5e-3, eta_min = 0.0, max_epochs = 100, label_smoothing=0.1,  **model_kwargs):
+                 dim: int = 3, lr= 1e-3, weight_decay = 5e-3, eta_min = 0.0, max_epochs = 100, scheduler_type = 'cosine',  **model_kwargs):
+        
         super(RecognitionModel, self).__init__()
         self.criterion = torch.nn.CrossEntropyLoss()#label_smoothing=label_smoothing)
         self.optimizer_kwargs = {"lr":lr, "weight_decay":weight_decay}
         self.scheduler_kwargs = {"T_max":max_epochs, "eta_min":eta_min}
+
+        self.scheduler_type = scheduler_type
 
         self.num_outputs = num_classes
         self.dim = dim #position and edge_attr dimension
@@ -43,6 +46,11 @@ class RecognitionModel(pl.LightningModule):
         self.log("Train/Accuracy", training_accuracy, on_step=False, on_epoch=True, batch_size=batch_size, prog_bar=True)
         return loss
     
+    def on_train_epoch_end(self):
+        lr = self.optimizers().param_groups[0]["lr"]
+
+        self.log("lr-Adam", lr, on_step=False, on_epoch=True, logger=True)
+
     def validation_step(self, batch: torch_geometric.data.Batch, batch_idx: int) -> torch.Tensor:
 
         outputs = self.forward(batch)
@@ -73,7 +81,11 @@ class RecognitionModel(pl.LightningModule):
     
     def configure_optimizers(self):
         optimizer = torch.optim.Adam(self.parameters(), **self.optimizer_kwargs)
-        lr_scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, **self.scheduler_kwargs)
+
+        if self.scheduler_type == 'cosine':
+            lr_scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, **self.scheduler_kwargs)
+        elif self.scheduler_type == 'step':
+            lr_scheduler = torch.optim.lr_scheduler.LambdaLR(optimizer, lr_lambda=LRPolicy())
         
         return {
         "optimizer": optimizer,
@@ -83,3 +95,10 @@ class RecognitionModel(pl.LightningModule):
             "frequency": 1,
         },
     }
+
+class LRPolicy(object):
+    def __call__(self, epoch: int):
+        if epoch < 20:
+            return 1.0
+        else:
+            return 0.1
