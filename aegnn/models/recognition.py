@@ -1,17 +1,21 @@
 import torch
 import torch_geometric
 import lightning.pytorch as pl
+import wandb
 
+from lightning.pytorch.loggers import WandbLogger
 from torch.nn.functional import softmax
 from typing import Tuple
 from .networks import by_name as model_by_name
 from torchmetrics.functional import accuracy
+from sklearn.metrics import ConfusionMatrixDisplay, confusion_matrix
+import matplotlib.pyplot as plt
 
  
 class RecognitionModel(pl.LightningModule):
 
     def __init__(self, network, dataset: str, num_classes, img_shape: Tuple[int, int],
-                 dim: int = 3, lr= 1e-3, weight_decay = 5e-3, eta_min = 0.0, max_epochs = 100, scheduler_type = 'cosine',  **model_kwargs):
+                 dim: int = 3, lr= 1e-3, weight_decay = 5e-3, eta_min = 0.0, max_epochs = 100, scheduler_type = 'cosine', log_dir = None, **model_kwargs):
         
         super(RecognitionModel, self).__init__()
         self.criterion = torch.nn.CrossEntropyLoss()#label_smoothing=label_smoothing)
@@ -22,6 +26,8 @@ class RecognitionModel(pl.LightningModule):
 
         self.num_outputs = num_classes
         self.dim = dim #position and edge_attr dimension
+
+        self.log_dir = log_dir
 
         model_input_shape = torch.tensor(img_shape + (dim, ), device=self.device)
         self.model = model_by_name(network)(dataset, model_input_shape, num_outputs=num_classes, **model_kwargs)
@@ -65,11 +71,21 @@ class RecognitionModel(pl.LightningModule):
 
     ### Test with Pytorch Lightning
 
+    def on_test_start(self):
+        
+        self.test_preds = []
+        self.test_targets = []
+
     def test_step(self, batch: torch_geometric.data.Batch, batch_idx: int):
         
         outputs = self.forward(batch)
 
         batch_size = batch.num_graphs
+
+        preds = outputs.argmax(dim=1)
+
+        self.test_preds.append(preds.cpu())
+        self.test_targets.append(batch.y.cpu())
 
         self.log("Test/loss", self.criterion(outputs, target=batch.y), on_step=False, on_epoch=True, batch_size=batch_size, prog_bar=True)
         self.log("Test/Accuracy", accuracy(preds=outputs, target=batch.y, task="multiclass", num_classes=self.num_outputs), on_step=False, on_epoch=True, batch_size=batch_size, prog_bar=True)
@@ -77,8 +93,49 @@ class RecognitionModel(pl.LightningModule):
         self.log(f"Test/Accuracy_Top{k}", accuracy(preds=outputs, target=batch.y,  task="multiclass", num_classes=self.num_outputs, top_k=k), on_step=False, on_epoch=True, batch_size=batch_size, prog_bar=True)
 
         # return super().test_step(*args, **kwargs)
-    
-    
+
+    def on_test_end(self):
+        
+        preds = torch.cat(self.test_preds)
+        targets = torch.cat(self.test_targets)
+
+        cm = confusion_matrix(targets, preds)
+
+        fig, ax = plt.subplots(figsize=(8, 8))
+
+        disp = ConfusionMatrixDisplay(
+            confusion_matrix=cm,
+            # display_labels=data_module.classes
+        )
+
+        disp.plot(
+            ax=ax,
+            xticks_rotation=90,
+            colorbar=True
+        )
+
+        plt.tight_layout()
+        plt.savefig(f"{self.log_dir}/confusion_matrix.png", dpi=300)
+        plt.close()
+
+        wandb_logger = None
+
+        for logger in self.trainer.loggers:
+            if isinstance(logger, WandbLogger):
+                wandb_logger = logger
+                break
+
+        if wandb_logger is not None:
+        
+            self.logger.experiment.log({
+            "conf_mat": wandb.plot.confusion_matrix(
+                probs=None,
+                y_true=targets.numpy(),
+                preds=preds.numpy(),
+                # class_names=self.classes
+            )
+        })
+        
     def configure_optimizers(self):
         optimizer = torch.optim.Adam(self.parameters(), **self.optimizer_kwargs)
 

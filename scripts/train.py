@@ -88,7 +88,7 @@ def training(cfg):
     #Save best and last model 
     checkpoint_callback = ModelCheckpoint(
         dirpath=checkpoint_path,
-        filename="best-{epoch:02d}-{val_loss:.4f}",
+        filename="best",
         monitor="Val/Accuracy",
         mode='max',
         save_top_k=1,
@@ -129,6 +129,21 @@ def training(cfg):
                      )
 
     trainer.fit(model, datamodule=data_module)
+
+    # Test the best model
+
+    best_model = aegnn.models.recognition.RecognitionModel.load_from_checkpoint(f'{checkpoint_path}/best.ckpt',
+                                                                                network=cfg["model"],
+                                                                                dataset=cfg["dataset"],
+                                                                                num_classes=data_module.num_classes,
+                                                                                img_shape=data_module.dims,
+                                                                                max_epochs = cfg["trainer"]["max_epochs"],
+                                                                                bias = True,
+                                                                                root_weight = True,
+                                                                                log_dir = checkpoint_path, 
+                                                                                **cfg["model_params"])
+
+    trainer.test(best_model, data_module)
 
 if __name__ == "__main__":
     main()
