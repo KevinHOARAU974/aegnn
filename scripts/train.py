@@ -96,6 +96,7 @@ def training(cfg):
         auto_insert_metric_name=False
     )
 
+
     #Early Stopping
     early_stopping = EarlyStopping(
         monitor="Val/Accuracy",
