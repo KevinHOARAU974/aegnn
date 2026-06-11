@@ -58,12 +58,31 @@ class GraphRes(torch.nn.Module):
         self.fc = Linear(pooling_outputs * 16, out_features=num_outputs, bias=bias)
 
     def forward(self, data: torch_geometric.data.Batch) -> torch.Tensor:
+        
         x_f = data.x.clone()
-        #Normalizing a whole bath
+        
+        #data_cloned = data.clone()
+        
+        #Normalizing a whole batch
         # x_f[0] = x_f[0]/120 #normalizing x
         # x_f[1] = x_f[1]/100 #normalizing y
         # x_f[2] = (x_f[2] - torch.min(x_f[2]))/(torch.max(x_f[2]-torch.min(x_f[2]))) # Normalizing time
         
+        #Normalizing for each graph
+        # num_graphs = torch.unique(data.batch)
+        # for graph_idx in range(len(num_graphs)): # For each graph in the batch
+        #     t_min = torch.min(data_cloned.x[data_cloned.batch == graph_idx][:,2])
+        #     t_max = torch.max(data_cloned.x[data_cloned.batch == graph_idx][:,2])
+
+        #     mask = data_cloned.batch == graph_idx
+        #     data_cloned.x[mask, 2] = (data_cloned.x[mask, 2]-t_min)/(t_max-t_min)
+        
+
+        x_f[0] = x_f[0]/120 #normalizing x
+        x_f[1] = x_f[1]/100 #normalizing y
+        x_f[2] = x_f[2]/0.1
+
+
         x_f = elu(self.conv1(x_f, data.edge_index, data.edge_attr))
         x_f = self.norm1(x_f)
         x_f = elu(self.conv2(x_f, data.edge_index, data.edge_attr))
