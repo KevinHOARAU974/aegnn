@@ -1,2 +1,5 @@
 *.pyc
 aegnn.egg-info/
+aegnn/data/
+aegnn/training_log_aegnn/
+aegnn/wandb/

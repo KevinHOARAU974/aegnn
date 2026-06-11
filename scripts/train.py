@@ -30,7 +30,6 @@ def main() -> None:
     print(cfg)
 
     os.environ["AEGNN_DATA_DIR"] = cfg["data_dir"]
-    print(os.environ["AEGNN_DATA_DIR"])
 
     pl.seed_everything(cfg["seed"], workers=True)
 
@@ -40,6 +39,7 @@ def main() -> None:
 def training(cfg):
 
     gpu = True if torch.cuda.is_available() else False
+    print(f"\n Is the GPU available: {gpu} \n")
 
     #Load data module
     data_module = aegnn.datasets.by_name(cfg['dataset']).from_cfg(cfg['data_params'])

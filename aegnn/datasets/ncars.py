@@ -31,10 +31,14 @@ class NCars(NCaltech101):
         return "car" if label_txt == "1" else "background"
 
     @staticmethod
-    def load(raw_file: str) -> Data:
+    def load(raw_file: str, self) -> Data:
         events_file = os.path.join(raw_file, "events.txt")
         events = torch.from_numpy(np.loadtxt(events_file)).float()#.cuda()
-        x, pos = events[:, -1:], events[:, :3]
+        x, pos = events[:, :4], events[:, :3]
+
+        #x[:,0] = x[:,0]/self.dims[0]
+        #x[:,1] = x[:,1]/self.dims[1]
+        #x[:,2] = x[:,2]/torch.max(x[:,2]) #Should think if we need to normalize the time
         return Data(x=x, pos=pos)
 
     def pre_transform(self, data: Data) -> Data:

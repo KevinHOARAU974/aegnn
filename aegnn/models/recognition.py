@@ -32,7 +32,7 @@ class RecognitionModel(pl.LightningModule):
     ### Training with Pytorch Lightning
 
     def training_step(self, batch : torch_geometric.data.Batch, batch_idx : int) :
-
+        
         outputs = self.forward(batch)
         loss = self.criterion(outputs, target=batch.y)
         batch_size = batch.num_graphs
@@ -74,7 +74,7 @@ class RecognitionModel(pl.LightningModule):
     def configure_optimizers(self):
         optimizer = torch.optim.Adam(self.parameters(), **self.optimizer_kwargs)
         lr_scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, **self.scheduler_kwargs)
-        
+        #lr_scheduler = torch.optim.lr_scheduler.LambdaLR(optimizer, lr_lambda=lambda epoch: 1 if epoch<=20 else 1)
         return {
         "optimizer": optimizer,
         "lr_scheduler": {
@@ -83,3 +83,4 @@ class RecognitionModel(pl.LightningModule):
             "frequency": 1,
         },
     }
+

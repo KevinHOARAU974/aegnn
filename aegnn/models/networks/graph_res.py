@@ -26,7 +26,7 @@ class GraphRes(torch.nn.Module):
         # Set dataset specific hyper-parameters.
         if dataset == "ncars":
             kernel_size = 2
-            n = [1, 8, 16, 16, 16, 32, 32, 32, 32]
+            n = [4, 8, 16, 16, 16, 32, 32, 32, 32]
             pooling_outputs = 32
         elif dataset == "ncaltech101" or dataset == "gen1":
             kernel_size = 8
@@ -59,6 +59,11 @@ class GraphRes(torch.nn.Module):
 
     def forward(self, data: torch_geometric.data.Batch) -> torch.Tensor:
         x_f = data.x.clone()
+        #Normalizing a whole bath
+        # x_f[0] = x_f[0]/120 #normalizing x
+        # x_f[1] = x_f[1]/100 #normalizing y
+        # x_f[2] = (x_f[2] - torch.min(x_f[2]))/(torch.max(x_f[2]-torch.min(x_f[2]))) # Normalizing time
+        
         x_f = elu(self.conv1(x_f, data.edge_index, data.edge_attr))
         x_f = self.norm1(x_f)
         x_f = elu(self.conv2(x_f, data.edge_index, data.edge_attr))
