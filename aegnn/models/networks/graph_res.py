@@ -14,14 +14,23 @@ from aegnn.models.layer import MaxPooling, MaxPoolingX
 
 class GraphRes(torch.nn.Module):
 
-    def __init__(self, dataset, input_shape: torch.Tensor, num_outputs: int, pooling_size=(16, 12),
-                 bias: bool = False, root_weight: bool = False):
+    def __init__(
+        self,
+        dataset,
+        input_shape: torch.Tensor,
+        num_outputs: int,
+        pooling_size=(16, 12),
+        bias: bool = False,
+        root_weight: bool = False,
+    ):
         super(GraphRes, self).__init__()
-        assert len(input_shape) == 3, "invalid input shape, should be (img_width, img_height, dim)"
+        assert (
+            len(input_shape) == 3
+        ), "invalid input shape, should be (img_width, img_height, dim)"
         dim = int(input_shape[-1])
         self.feature_map = None
-        self.fm_to_pool = None #feature map before first max pooling layer
-        self.fm_to_pool_x = None #feature map before second max pooling layer
+        self.fm_to_pool = None  # feature map before first max pooling layer
+        self.fm_to_pool_x = None  # feature map before second max pooling layer
 
         # Set dataset specific hyper-parameters.
         if dataset == "ncars":
@@ -35,40 +44,96 @@ class GraphRes(torch.nn.Module):
         else:
             raise NotImplementedError(f"No model parameters for dataset {dataset}")
 
-        self.conv1 = SplineConv(n[0], n[1], dim=dim, kernel_size=kernel_size, bias=bias, root_weight=root_weight)
+        self.conv1 = SplineConv(
+            n[0],
+            n[1],
+            dim=dim,
+            kernel_size=kernel_size,
+            bias=bias,
+            root_weight=root_weight,
+        )
         self.norm1 = BatchNorm(in_channels=n[1])
-        self.conv2 = SplineConv(n[1], n[2], dim=dim, kernel_size=kernel_size, bias=bias, root_weight=root_weight)
+        self.conv2 = SplineConv(
+            n[1],
+            n[2],
+            dim=dim,
+            kernel_size=kernel_size,
+            bias=bias,
+            root_weight=root_weight,
+        )
         self.norm2 = BatchNorm(in_channels=n[2])
 
-        self.conv3 = SplineConv(n[2], n[3], dim=dim, kernel_size=kernel_size, bias=bias, root_weight=root_weight)
+        self.conv3 = SplineConv(
+            n[2],
+            n[3],
+            dim=dim,
+            kernel_size=kernel_size,
+            bias=bias,
+            root_weight=root_weight,
+        )
         self.norm3 = BatchNorm(in_channels=n[3])
-        self.conv4 = SplineConv(n[3], n[4], dim=dim, kernel_size=kernel_size, bias=bias, root_weight=root_weight)
+        self.conv4 = SplineConv(
+            n[3],
+            n[4],
+            dim=dim,
+            kernel_size=kernel_size,
+            bias=bias,
+            root_weight=root_weight,
+        )
         self.norm4 = BatchNorm(in_channels=n[4])
 
-        self.conv5 = SplineConv(n[4], n[5], dim=dim, kernel_size=kernel_size, bias=bias, root_weight=root_weight)
+        self.conv5 = SplineConv(
+            n[4],
+            n[5],
+            dim=dim,
+            kernel_size=kernel_size,
+            bias=bias,
+            root_weight=root_weight,
+        )
         self.norm5 = BatchNorm(in_channels=n[5])
-        self.pool5 = MaxPooling(pooling_size, transform=Cartesian(norm=True, cat=False), start = [0., 0.], end= input_shape[:2]-1)
+        self.pool5 = MaxPooling(
+            pooling_size,
+            transform=Cartesian(norm=True, cat=False),
+            start=[0.0, 0.0],
+            end=input_shape[:2] - 1,
+        )
 
-        self.conv6 = SplineConv(n[5], n[6], dim=dim, kernel_size=kernel_size, bias=bias, root_weight=root_weight)
+        self.conv6 = SplineConv(
+            n[5],
+            n[6],
+            dim=dim,
+            kernel_size=kernel_size,
+            bias=bias,
+            root_weight=root_weight,
+        )
         self.norm6 = BatchNorm(in_channels=n[6])
-        self.conv7 = SplineConv(n[6], n[7], dim=dim, kernel_size=kernel_size, bias=bias, root_weight=root_weight)
+        self.conv7 = SplineConv(
+            n[6],
+            n[7],
+            dim=dim,
+            kernel_size=kernel_size,
+            bias=bias,
+            root_weight=root_weight,
+        )
         self.norm7 = BatchNorm(in_channels=n[7])
 
-        self.pool7 = MaxPoolingX(input_shape[:2] // 4, size=16, start = [0., 0.], end= input_shape[:2]-1)
+        self.pool7 = MaxPoolingX(
+            input_shape[:2] // 4, size=16, start=[0.0, 0.0], end=input_shape[:2] - 1
+        )
         self.fc = Linear(pooling_outputs * 16, out_features=num_outputs, bias=bias)
 
     def forward(self, data: torch_geometric.data.Batch) -> torch.Tensor:
-        
+
         x_f = data.x.clone()
+
+        # data_cloned = data.clone()
+
+        # Normalizing a whole batch
+        # x_f[:,0] = x_f[:,0]/120 #normalizing x
+        # x_f[:,1] = x_f[:,1]/100 #normalizing y
+        # x_f[:,2] = (x_f[:,2] - torch.min(x_f[2]))/(torch.max(x_f[2]-torch.min(x_f[2]))) # Normalizing time
         
-        #data_cloned = data.clone()
-        
-        #Normalizing a whole batch
-        # x_f[0] = x_f[0]/120 #normalizing x
-        # x_f[1] = x_f[1]/100 #normalizing y
-        # x_f[2] = (x_f[2] - torch.min(x_f[2]))/(torch.max(x_f[2]-torch.min(x_f[2]))) # Normalizing time
-        
-        #Normalizing for each graph
+        #Normalizing for each graph #Not necessary given that time is in [0,100ms] for each sequence, just divide by 0.1(100ms)
         # num_graphs = torch.unique(data.batch)
         # for graph_idx in range(len(num_graphs)): # For each graph in the batch
         #     t_min = torch.min(data_cloned.x[data_cloned.batch == graph_idx][:,2])
@@ -78,9 +143,9 @@ class GraphRes(torch.nn.Module):
         #     data_cloned.x[mask, 2] = (data_cloned.x[mask, 2]-t_min)/(t_max-t_min)
         
 
-        x_f[0] = x_f[0]/120 #normalizing x
-        x_f[1] = x_f[1]/100 #normalizing y
-        x_f[2] = x_f[2]/0.1
+        x_f[:,0] = x_f[:,0]/120 #normalizing x (x in [0, 120])
+        x_f[:,1] = x_f[:,1]/100 #normalizing y (y in [0, 100])
+        x_f[:,2] = x_f[:,2]/0.1 #Normalizing time (t in [0,100ms])
 
 
         x_f = elu(self.conv1(x_f, data.edge_index, data.edge_attr))
