@@ -4,6 +4,8 @@ import logging
 import numpy as np
 import os
 import torch
+import hdf5plugin
+import h5py
 
 from torch_geometric.data import Data
 from torch_geometric.nn.pool import radius_graph
@@ -19,7 +21,7 @@ from .utils.normalization import normalize_time
 class NCaltech101(EventDataModule):
 
     def __init__(self, batch_size: int = 64, shuffle: bool = True, num_workers: int = 8,
-                 pin_memory: bool = False, transform: Optional[Callable[[Data], Data]] = None):
+                 pin_memory: bool = False, format='bin', transform: Optional[Callable[[Data], Data]] = None):
         super(NCaltech101, self).__init__(img_shape=(240, 180), batch_size=batch_size, shuffle=shuffle,
                                           num_workers=num_workers, pin_memory=pin_memory, transform=transform)
         pre_processing_params = {"r": 5.0, "d_max": 32, "n_samples": 25000, "sampling": True}
@@ -27,9 +29,39 @@ class NCaltech101(EventDataModule):
 
         self.dims = (240,180)
 
+        self.format = format
+
     def read_annotations(self, raw_file: str) -> Optional[np.ndarray]:
         annotations_dir = os.path.expanduser(os.path.join(os.environ["AEGNN_DATA_DIR"], "ncaltech101", "annotations"))
         raw_file_name = os.path.basename(raw_file).replace("image", "annotation")
+        raw_dir_name = os.path.basename(os.path.dirname(raw_file))
+        annotation_file = os.path.join(os.path.join(annotations_dir, raw_dir_name, raw_file_name))
+
+        f = open(annotation_file)
+        annotations = np.fromfile(f, dtype=np.int16)
+        annotations = np.array(annotations[2:10])
+        f.close()
+
+        label = self.read_label(raw_file)
+        class_id = self.map_label(label)
+        if class_id is None:
+            return None
+
+        # Create bounding box from corner, shape and label variables. NCaltech101 bounding boxes
+        # often start outside of the frame (negative corner coordinates). However, the shape turns
+        # out to be the shape of the bbox starting at the image's frame.
+        bbox = np.array([
+            annotations[0], annotations[1],  # upper-left corner
+            annotations[2] - annotations[0],  # width
+            annotations[5] - annotations[1],  # height
+            class_id
+        ])
+        bbox[:2] = np.maximum(bbox[:2], 0)
+        return bbox.reshape((1, 1, -1))
+    
+    def read_annotations_h5(self, raw_file: str) -> Optional[np.ndarray]:
+        annotations_dir = os.path.expanduser(os.path.join(os.environ["AEGNN_DATA_DIR"], "ncaltech101", "annotations"))
+        raw_file_name = os.path.basename(raw_file).replace("image", "annotation").replace(".h5", ".bin")
         raw_dir_name = os.path.basename(os.path.dirname(raw_file))
         annotation_file = os.path.join(os.path.join(annotations_dir, raw_dir_name, raw_file_name))
 
@@ -78,6 +110,22 @@ class NCaltech101(EventDataModule):
 
         x, pos = events[:, -1:], events[:, :3]   # x = polarity, pos = spatio-temporal position
         return Data(x=x, pos=pos)
+    
+    @staticmethod
+    def load_h5(raw_file: str) -> Data:
+        with h5py.File(str(raw_file)) as fh:
+            fh = fh['events']
+            x = fh["x"]
+            y = fh["y"]
+            t = fh["t"]
+            p = fh["p"]
+
+            events = np.column_stack((x, y, t, p))
+            events = torch.from_numpy(events).float().cuda()
+
+            feature, pos = events[:, -1:], events[:, :3]
+
+        return Data(x=feature, pos=pos) 
 
     @functools.lru_cache(maxsize=100)
     def map_label(self, label: str) -> int:
@@ -92,17 +140,28 @@ class NCaltech101(EventDataModule):
     #########################################################################################################
     def _prepare_dataset(self, mode: str):
         processed_dir = os.path.expanduser(os.path.join(self.root, "processed"))
-        raw_files = self.raw_files(mode)
+        if self.format == 'h5':
+            raw_files = self.raw_files_h5(mode)
+            load_func = self.load_h5
+            read_annotations = self.read_annotations_h5
+        else:
+            raw_files = self.raw_files(mode)
+            load_func = self.load
+            read_annotations = self.read_annotations
+
         print(f'RAW FILer length {len(raw_files)}')
         class_dict = {class_id: i for i, class_id in enumerate(self.classes)}
-        kwargs = dict(load_func=self.load, class_dict=class_dict, pre_transform=self.pre_transform,
-                      read_label=self.read_label, read_annotations=self.read_annotations)
+        kwargs = dict(load_func=load_func, class_dict=class_dict, pre_transform=self.pre_transform,
+                      read_label=self.read_label, read_annotations=self.read_annotations_h5)
         logging.debug(f"Found {len(raw_files)} raw files in dataset (mode = {mode})")
 
         task_manager = TaskManager(self.num_workers, queue_size=self.num_workers)
         processed_files = []
         for rf in tqdm(raw_files):
-            processed_file = rf.replace(self.root, processed_dir)
+            if self.format == 'h5':
+                processed_file = rf.replace(self.root, processed_dir).replace(".h5",".bin")
+            else:
+                processed_file = rf.replace(self.root, processed_dir)
             processed_files.append(processed_file)
 
             if os.path.exists(processed_file):
@@ -118,6 +177,7 @@ class NCaltech101(EventDataModule):
 
         # Load data from raw file. If the according loaders are available, add annotation, label and class id.
         device = "cuda" if torch.cuda.is_available() else "cpu" # torch.device(torch.cuda.current_device())
+        print(device)
         data_obj = load_func(rf).to(device)
         data_obj.file_id = os.path.basename(rf)
         if (label := read_label(rf)) is not None:
@@ -175,6 +235,10 @@ class NCaltech101(EventDataModule):
     #########################################################################################################
     def raw_files(self, mode: str) -> List[str]:
         return glob.glob(os.path.expanduser(os.path.join(self.root, mode, "*", "*.bin")), recursive=True)
+    
+    def raw_files_h5(self, mode: str) -> List[str]:
+        return glob.glob(os.path.expanduser(os.path.join(self.root, mode, "*", "*.h5")), recursive=True)
+
 
     def processed_files(self, mode: str) -> List[str]:
         processed_dir = os.path.expanduser(os.path.join(self.root, "processed"))

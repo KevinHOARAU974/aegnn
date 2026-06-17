@@ -35,5 +35,9 @@ if __name__ == '__main__':
 
     dm_class = aegnn.datasets.by_name(cfg['dataset'])
 
-    dm = dm_class(cfg["data_params"])
+    if cfg['dataset'] == 'nclatech101':
+        dm = dm_class(cfg["data_params"], format = cfg['format'])
+    else:
+        dm = dm_class(cfg["data_params"])
+        
     dm.prepare_data()
