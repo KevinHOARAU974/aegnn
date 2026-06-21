@@ -46,7 +46,6 @@ class RecognitionModel(pl.LightningModule):
     def validation_step(self, batch: torch_geometric.data.Batch, batch_idx: int) -> torch.Tensor:
 
         outputs = self.forward(batch)
-
         batch_size = batch.num_graphs
 
         self.log("Val/loss", self.criterion(outputs, target=batch.y), on_step=False, on_epoch=True, batch_size=batch_size, prog_bar=True)

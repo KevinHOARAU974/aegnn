@@ -33,10 +33,21 @@ class MaxPoolingX(torch.nn.Module):
         if torch.is_tensor(self.end):
             self.end = self.end.to(device=pos.device, dtype=pos.dtype)
         
-        # print(f"device end: {self.end}")
+        # # print(f"device end: {self.end}")
         cluster = voxel_grid(pos, batch=batch, size=self.voxel_size, start=self.start, end=self.end)
+       
+        # # Number of occupied clusters
+        # print("occupied clusters:", cluster.unique().numel())
+
+        # # Number of nodes in each cluster
+        # counts = torch.bincount(cluster)
+        # print("cluster counts:", counts)
+        # print("empty clusters:", (counts == 0).sum())
 
         x, _ = max_pool_x(cluster, x, batch, size=self.size)
+
+        
+
         return x
 
     def __repr__(self):

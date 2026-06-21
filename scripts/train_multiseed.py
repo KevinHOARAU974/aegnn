@@ -17,7 +17,7 @@ checkpoint_path = Path(
     "/home/ibrahim/event_graph_aegnn/training_log_aegnn_multiseed_msub/checkpoints/ncars/recognition/"
 )
 
-for seed in range(2):
+for seed in range(10,16):
     print(f"\n ------- SEED {seed} --------\n")
 
     #Opening the config file to change the seed

@@ -23,9 +23,10 @@ test_loader = data_module.test_dataloader()
 
 
 
-model_paths = "/home/jovyan/training_log_aegnn_multiseed/checkpoints/ncars/recognition/"
+model_paths = "/home/ibrahim/event_graph_aegnn/external/training_log_aegnn_multiseed/checkpoints/ncars/recognition/"
 root = Path(model_paths)
 models_list = [str(p) for p in root.rglob("*.ckpt")]
+print(len(models_list))
 
 for model_path in models_list:
     model = aegnn.models.recognition.RecognitionModel.load_from_checkpoint(
