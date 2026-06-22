@@ -65,14 +65,21 @@ class NCars(NCaltech101):
         # data.edge_index = radius_graph(data.pos, r=params["r"], max_num_neighbors=params["d_max"])
 
         pos = data.pos.to("cuda")
+
+
+        eps = 1e-9
+
+        pos_min = pos.min(dim=0).values
+        pos_max = pos.max(dim=0).values
+        pos_tmp = (pos-pos_min)/(pos_max - pos_min + eps)
+
         N = pos.size(0)
 
         k_min = 2
-        k_max = 32
-        eps = 1e-9
+        k_max = 10
 
         # [N, N] pairwise distances
-        dist = torch.cdist(pos, pos)
+        dist = torch.cdist(pos_tmp, pos_tmp)
 
         # ignore self-distance
         dist.fill_diagonal_(float("inf"))

@@ -24,17 +24,19 @@ class MaxPoolingX(torch.nn.Module):
         if batch is not None:
             batch = batch.long()
 
-        if torch.is_tensor(self.voxel_size):
-            self.voxel_size = self.voxel_size.to(device=pos.device, dtype=pos.dtype)
+        voxel_size = self.voxel_size
+        start = self.start
+        end = self.end
+        if torch.is_tensor(voxel_size):
+            voxel_size = voxel_size.to(device=pos.device, dtype=pos.dtype)
         
-        if torch.is_tensor(self.start):
-            self.start = self.start.to(device=pos.device, dtype=pos.dtype)
+        if torch.is_tensor(start):
+            start = self.start.to(device=pos.device, dtype=pos.dtype)
 
-        if torch.is_tensor(self.end):
-            self.end = self.end.to(device=pos.device, dtype=pos.dtype)
+        if torch.is_tensor(end):
+            end = self.end.to(device=pos.device, dtype=pos.dtype)
         
-        # # print(f"device end: {self.end}")
-        cluster = voxel_grid(pos, batch=batch, size=self.voxel_size, start=self.start, end=self.end)
+        cluster = voxel_grid(pos, batch=batch, size=voxel_size, start=start, end=end)
        
         # # Number of occupied clusters
         # print("occupied clusters:", cluster.unique().numel())

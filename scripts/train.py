@@ -45,7 +45,6 @@ def training(cfg):
     data_module = aegnn.datasets.by_name(cfg['dataset']).from_cfg(cfg['data_params'])
     # print('module créé')
     data_module.setup()
-
     #Create model
     model = aegnn.models.by_task(cfg['task'])(cfg["model"],
                                       cfg["dataset"],

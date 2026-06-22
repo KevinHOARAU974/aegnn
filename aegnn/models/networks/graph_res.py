@@ -32,6 +32,7 @@ class GraphRes(torch.nn.Module):
         self.fm_to_pool = None  # feature map before first max pooling layer
         self.fm_to_pool_x = None  # feature map before second max pooling layer
 
+
         # Set dataset specific hyper-parameters.
         if dataset == "ncars":
             kernel_size = 2
@@ -90,6 +91,8 @@ class GraphRes(torch.nn.Module):
             bias=bias,
             root_weight=root_weight,
         )
+        print("----INSIDE GRAPH RES INIT----")
+        print("Input shape", input_shape)
         self.norm5 = BatchNorm(in_channels=n[5])
         self.pool5 = MaxPooling(
             pooling_size,
@@ -168,23 +171,25 @@ class GraphRes(torch.nn.Module):
         # for g in range(data.batch.max().item() + 1):
         #     mask = data.batch == g
         #     print(
-        #         "graph", g,
         #         "num nodes:", mask.sum().item(),
         #         "pos min:", data.pos[mask, :2].min(dim=0).values,
         #         "pos max:", data.pos[mask, :2].max(dim=0).values,
         #     )
-        #print("BEFORE POOL5", data.batch.max().item() + 1)
-        print(f"\nBEFORE POOL5 file id {data.file_id}\n")
+        
+        # counts = torch.bincount(data.batch)
+        # print("----------BEFORE POOL5--------")
+        # print("BEFORE pool5 counts:", counts)
+        # print(f"\nBEFORE POOL5 file id {data.file_id}\n")
         self.fm_to_pool = Data(x=x_f, pos=data.pos, batch=data.batch, edge_index=data.edge_index, edge_attr=data.edge_attr)
         data_pooled = self.pool5(x_f, pos=data.pos, batch=data.batch, edge_index=data.edge_index, return_data_obj=True)
         #print("AFTER POOL5", data_pooled.batch.max().item() + 1)
         
-        counts = torch.bincount(data_pooled.batch)
-        print("after pool5 counts:", counts)
-
-        # for g in range(len(counts)):
-        #     print(f"graph {g}: {counts[g].item()} nodes")
-
+        # print("----------AFTER POOL5--------")
+        # counts = torch.bincount(data_pooled.batch)
+        # print("AFTER pool5 counts:", counts)
+        # print(f"max edge index = {data_pooled.edge_index.max()} ")
+        # print(f"num nodes = {data_pooled.x.size(0)}")
+        
         x_f = data_pooled.x.clone()
         x_sc = x_f.clone()
         x_f = elu(self.conv6(x_f, data_pooled.edge_index, data_pooled.edge_attr))
@@ -193,13 +198,21 @@ class GraphRes(torch.nn.Module):
         x_f = self.norm7(x_f)
         x_f = x_f + x_sc
 
+        assert data_pooled.edge_index.min() >= 0
+        assert data_pooled.edge_index.max() < x_sc.size(0)
+
         self.fm_to_pool_x = Data(x=x_f, pos=data_pooled.pos, batch=data_pooled.batch, edge_index=data_pooled.edge_index, edge_attr=data_pooled.edge_attr)
         
-        #print("num graphs: BEFORE POOL7", data_pooled.batch.max().item() + 1)
         x = self.pool7(x_f, pos=data_pooled.pos[:, :2], batch=data_pooled.batch)
-        #print("num graphs: AFTER POOL7", data_pooled.batch.max().item() + 1)
-
+        
         x = x.reshape(data.num_graphs, -1)
+        print("pool7 nan:", torch.isnan(x).any())
+        print("pool7 inf:", torch.isinf(x).any())
+
 
         self.feature_map = x
-        return self.fc(x)
+        out = self.fc(x)
+        print("fc nan:", torch.isnan(out).any())
+        print("fc inf:", torch.isinf(out).any())
+
+        return out
