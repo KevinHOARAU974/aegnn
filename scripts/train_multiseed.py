@@ -13,9 +13,7 @@ print(os.environ["AEGNN_DATA_DIR"])
 
 config_path = Path("/home/ibrahim/event_graph_aegnn/config/config.yaml")
 
-checkpoint_path = Path(
-    "/home/ibrahim/event_graph_aegnn/training_log_aegnn_multiseed_msub/checkpoints/ncars/recognition/"
-)
+
 
 for seed in range(10,16):
     print(f"\n ------- SEED {seed} --------\n")

@@ -14,8 +14,7 @@ class MaxPooling(torch.nn.Module):
         self.transform = transform
         self.start = start
         self.end = end
-        print("*****INIT MAX POOLING******")
-        print("\t self.end", self.end)
+        
         
     def forward(self, x: torch.Tensor, pos: torch.Tensor, batch: Optional[torch.Tensor] = None,
                 edge_index: Optional[torch.Tensor] = None, return_data_obj: bool = False
@@ -33,15 +32,14 @@ class MaxPooling(torch.nn.Module):
         
         if torch.is_tensor(start):
             start = start.to(device=pos.device, dtype=pos.dtype)
-        print("Type before:", type(self.end))
         if torch.is_tensor(end):
             end = end.to(device=pos.device, dtype=pos.dtype)
         
         
         cluster = voxel_grid(pos[:, :2], batch=batch, size=self.voxel_size, start=start, end= end)
-        unique, counts = torch.unique(cluster, return_counts=True)
-        print("--Nodes per CLUSTER: ", counts)
-        print("--CLUSTERS_idx: ", unique)
+        #unique, counts = torch.unique(cluster, return_counts=True)
+        # print("--Nodes per CLUSTER: ", counts)
+        # print("--CLUSTERS_idx: ", unique)
         data = Data(x=x, pos=pos, edge_index=edge_index, batch=batch)
         data = max_pool(cluster, data=data, transform=self.transform)  # transform for new edge attributes
         if return_data_obj:

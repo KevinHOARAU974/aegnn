@@ -48,7 +48,7 @@ class NCars(NCaltech101):
     def load(raw_file: str) -> Data:
         events_file = os.path.join(raw_file, "events.txt")
         events = torch.from_numpy(np.loadtxt(events_file)).float()  # .cuda()
-        x, pos = events[:, :4], events[:, :3]
+        x, pos = events[:,-1:], events[:, :3]
 
         return Data(x=x, pos=pos)
 
@@ -56,61 +56,55 @@ class NCars(NCaltech101):
         params = self.hparams.preprocessing
 
         # Re-weight temporal vs. spatial dimensions to account for different resolutions.
-        data.pos[:, 2] = normalize_time(data.pos[:, 2])
-
+        data.pos[:, 2] = normalize_time(data.pos[:, 2], beta=1000) # to have max_t=1
         # Coarsen graph by uniformly sampling n points from the event point cloud.
         data = self.sub_sampling(data, n_samples=params["n_samples"], sub_sample=params["sampling"])
 
-        # # Radius graph generation.
-        # data.edge_index = radius_graph(data.pos, r=params["r"], max_num_neighbors=params["d_max"])
+        # Radius graph generation.
+        data.edge_index = radius_graph(data.pos, r=params["r"], max_num_neighbors=params["d_max"])
 
-        pos = data.pos.to("cuda")
+        # pos = data.pos.to("cuda")
+        # eps = 1e-5
 
+        # N = pos.size(0)
 
-        eps = 1e-9
+        # k_min = 1
+        # k_max = 64
 
-        pos_min = pos.min(dim=0).values
-        pos_max = pos.max(dim=0).values
-        pos_tmp = (pos-pos_min)/(pos_max - pos_min + eps)
+        # # [N, N] pairwise distances
+        # dist = torch.cdist(pos, pos)
 
-        N = pos.size(0)
+        # # ignore self-distance
+        # dist.fill_diagonal_(float("inf"))
 
-        k_min = 2
-        k_max = 10
+        # # get k_max nearest neighbors once
+        # dist_knn, idx_knn = torch.topk(dist, k_max, largest=False, dim=1)
 
-        # [N, N] pairwise distances
-        dist = torch.cdist(pos_tmp, pos_tmp)
+        # # density using first k_min neighbors
+        # d_i = dist_knn[:,:k_min].mean(dim=1)
+        # rho = 1.0 / (d_i + eps)
 
-        # ignore self-distance
-        dist.fill_diagonal_(float("inf"))
+        # # normalize rho to [0, 1]
+        # rho_hat = (rho - rho.min()) / (rho.max() - rho.min() + eps)
 
-        # get k_max nearest neighbors once
-        dist_knn, idx_knn = torch.topk(dist, k_max, largest=False, dim=1)
+        # # adaptive k for each node
+        # k_i = torch.floor(k_min + (k_max - k_min) * rho_hat).long()
+        # k_i = torch.clamp(k_i, min=k_min, max=k_max)
 
-        # density using first k_min neighbors
-        d_i = dist_knn[:,:k_min].mean(dim=1)
-        rho = 1.0 / (d_i + eps)
+        # # create mask: keep first k_i neighbors for each node
+        # cols = torch.arange(k_max, device=pos.device).unsqueeze(0)  # [1, k_max]
+        # mask = cols < k_i.unsqueeze(1)  # [N, k_max]
 
-        # normalize rho to [0, 1]
-        rho_hat = (rho - rho.min()) / (rho.max() - rho.min() + eps)
+        # src = torch.arange(N, device=pos.device).unsqueeze(1).expand(N, k_max)
 
-        # adaptive k for each node
-        k_i = torch.floor(k_min + (k_max - k_min) * rho_hat).long()
-        k_i = torch.clamp(k_i, min=k_min, max=k_max)
+        # edge_index = torch.stack([src[mask], idx_knn[mask]], dim=0)
 
-        # create mask: keep first k_i neighbors for each node
-        cols = torch.arange(k_max, device=pos.device).unsqueeze(0)  # [1, k_max]
-        mask = cols < k_i.unsqueeze(1)  # [N, k_max]
+        # edge_index = to_undirected(edge_index, num_nodes=N)
+        # edge_index = torch.unique(edge_index.T, dim=0).T
+        # data.edge_index = edge_index
 
-        src = torch.arange(N, device=pos.device).unsqueeze(1).expand(N, k_max)
-
-        edge_index = torch.stack([src[mask], idx_knn[mask]], dim=0)
-
-        edge_index = to_undirected(edge_index, num_nodes=N)
-        data.edge_index = edge_index
-
-        assert data.edge_index.min() >= 0
-        assert data.edge_index.max() < data.x.shape[0]
+        # assert data.edge_index.min() >= 0
+        # assert data.edge_index.max() < data.x.shape[0]
 
         return data
 

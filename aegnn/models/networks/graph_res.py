@@ -36,7 +36,7 @@ class GraphRes(torch.nn.Module):
         # Set dataset specific hyper-parameters.
         if dataset == "ncars":
             kernel_size = 2
-            n = [4, 8, 16, 16, 16, 32, 32, 32, 32]
+            n = [1, 8, 16, 16, 16, 32, 32, 32, 32]
             pooling_outputs = 32
         elif dataset == "ncaltech101" or dataset == "gen1":
             kernel_size = 8
@@ -91,8 +91,8 @@ class GraphRes(torch.nn.Module):
             bias=bias,
             root_weight=root_weight,
         )
-        print("----INSIDE GRAPH RES INIT----")
-        print("Input shape", input_shape)
+        # print("----INSIDE GRAPH RES INIT----")
+        # print("Input shape", input_shape)
         self.norm5 = BatchNorm(in_channels=n[5])
         self.pool5 = MaxPooling(
             pooling_size,
@@ -127,7 +127,15 @@ class GraphRes(torch.nn.Module):
 
     def forward(self, data: torch_geometric.data.Batch) -> torch.Tensor:
         #print(f"number of labels: {data.y.shape}")
+        if torch.isnan(self.fc.weight).any():
+            raise RuntimeError("FC became NaN")
+
+        print(f"\n **************file id {data.file_id}*********\n")
         x_f = data.x.clone()
+        print("init X_max:", x_f.abs().max())
+        print("init mean:", x_f.mean())
+        print("init X_var min:", x_f.var())
+        print("\n")
         #print("num graphs: FIRST LAYER", data.batch.max().item() + 1)
 
         # data_cloned = data.clone()
@@ -147,24 +155,46 @@ class GraphRes(torch.nn.Module):
         #     data_cloned.x[mask, 2] = (data_cloned.x[mask, 2]-t_min)/(t_max-t_min)
         
 
-        x_f[:,0] = x_f[:,0]/120 #normalizing x (x in [0, 120])
-        x_f[:,1] = x_f[:,1]/100 #normalizing y (y in [0, 100])
-        x_f[:,2] = x_f[:,2]/0.1 #Normalizing time (t in [0,100ms])
+        # x_f[:,0] = x_f[:,0]/120 #normalizing x (x in [0, 120])
+        # x_f[:,1] = x_f[:,1]/100 #normalizing y (y in [0, 100])
+        # x_f[:,2] = x_f[:,2]/0.1 #Normalizing time (t in [0,100ms])
 
 
         x_f = elu(self.conv1(x_f, data.edge_index, data.edge_attr))
+        print("conv1 max:", x_f.abs().max())
+        print("conv1 mean:", x_f.mean())
+        print("conv1 var :", x_f.var())
+        print("\n")
         x_f = self.norm1(x_f)
         x_f = elu(self.conv2(x_f, data.edge_index, data.edge_attr))
+      
+        print("conv2 max:", x_f.abs().max())
+        print("conv2 mean:", x_f.mean())
+        print("conv2 var min:", x_f.var())
+        print("\n")
         x_f = self.norm2(x_f)
 
         x_sc = x_f.clone()
         x_f = elu(self.conv3(x_f, data.edge_index, data.edge_attr))
+  
+        print("conv3 max:", x_f.abs().max())
+        print("conv3 mean:", x_f.mean())
+        print("conv3 var :", x_f.var())
+        print("\n")
         x_f = self.norm3(x_f)
         x_f = elu(self.conv4(x_f, data.edge_index, data.edge_attr))
+        print("conv4 max:", x_f.abs().max())
+        print("conv4 mean:", x_f.mean())
+        print("conv4 var:", x_f.var())
+        print("\n")
         x_f = self.norm4(x_f)
         x_f = x_f + x_sc
 
         x_f = elu(self.conv5(x_f, data.edge_index, data.edge_attr))
+        print("conv5 max:", x_f.abs().max())
+        print("conv5 mean:", x_f.mean())
+        print("conv5 var:", x_f.var())
+        print("\n")
         x_f = self.norm5(x_f)
 
 
@@ -181,7 +211,13 @@ class GraphRes(torch.nn.Module):
         # print("BEFORE pool5 counts:", counts)
         # print(f"\nBEFORE POOL5 file id {data.file_id}\n")
         self.fm_to_pool = Data(x=x_f, pos=data.pos, batch=data.batch, edge_index=data.edge_index, edge_attr=data.edge_attr)
+        print("-------- Before pool5 --------")
+        print("edge_attr_min",self.fm_to_pool.edge_attr.min(dim=0).values)
+        print("edge_attr_max",self.fm_to_pool.edge_attr.max(dim=0).values)
         data_pooled = self.pool5(x_f, pos=data.pos, batch=data.batch, edge_index=data.edge_index, return_data_obj=True)
+        print("-------- After pool5 --------")
+        print("edge_attr_min",data_pooled.edge_attr.min(dim=0).values)
+        print("edge_attr_max",data_pooled.edge_attr.max(dim=0).values)
         #print("AFTER POOL5", data_pooled.batch.max().item() + 1)
         
         # print("----------AFTER POOL5--------")
@@ -193,26 +229,39 @@ class GraphRes(torch.nn.Module):
         x_f = data_pooled.x.clone()
         x_sc = x_f.clone()
         x_f = elu(self.conv6(x_f, data_pooled.edge_index, data_pooled.edge_attr))
+        
+        print("conv6 max:", x_f.abs().max())
+        print("conv6 mean:", x_f.mean())
+        print("conv6 var :", x_f.var())
         x_f = self.norm6(x_f)
         x_f = elu(self.conv7(x_f, data_pooled.edge_index, data_pooled.edge_attr))
+        
+        print("conv7 max:", x_f.abs().max())
+        print("conv7 mean:", x_f.mean())
+        print("conv7 var :", x_f.var())
+
         x_f = self.norm7(x_f)
         x_f = x_f + x_sc
 
-        assert data_pooled.edge_index.min() >= 0
-        assert data_pooled.edge_index.max() < x_sc.size(0)
+        
 
         self.fm_to_pool_x = Data(x=x_f, pos=data_pooled.pos, batch=data_pooled.batch, edge_index=data_pooled.edge_index, edge_attr=data_pooled.edge_attr)
         
+        
         x = self.pool7(x_f, pos=data_pooled.pos[:, :2], batch=data_pooled.batch)
+        print("conv5 max:", x.abs().max())
+        print("conv5 mean:", x.mean())
+        print("conv5 var:", x.var())
+        print("\n")
+
+
+        print("x before fc nan", torch.isnan(x).any())
+        print("x before fc inf", torch.isinf(x).any())
         
         x = x.reshape(data.num_graphs, -1)
-        print("pool7 nan:", torch.isnan(x).any())
-        print("pool7 inf:", torch.isinf(x).any())
 
-
+        
         self.feature_map = x
         out = self.fc(x)
-        print("fc nan:", torch.isnan(out).any())
-        print("fc inf:", torch.isinf(out).any())
-
+        print(f"out = {out}")
         return out

@@ -34,6 +34,9 @@ class RecognitionModel(pl.LightningModule):
     def training_step(self, batch : torch_geometric.data.Batch, batch_idx : int) :
         
         outputs = self.forward(batch)
+        print("+-+-+-  outputs max", outputs.abs().max())
+        print("+-+-+-  outputs mean", outputs.mean())
+        print("+-+-+-  outputs nan", torch.isnan(outputs).any())
         loss = self.criterion(outputs, target=batch.y)
         batch_size = batch.num_graphs
 
@@ -41,7 +44,29 @@ class RecognitionModel(pl.LightningModule):
         training_accuracy = accuracy(preds=outputs, target=batch.y, task="multiclass", num_classes=self.num_outputs)
         self.log("Train/loss", loss, on_step=False, on_epoch=True, batch_size=batch_size,  prog_bar=True)
         self.log("Train/Accuracy", training_accuracy, on_step=False, on_epoch=True, batch_size=batch_size, prog_bar=True)
+        if torch.isnan(loss) or torch.isinf(loss):
+            print("outputs =", outputs)
+            print("y =", batch.y)
+            raise RuntimeError("Bad loss")
+        print("loss =", loss.item())
+
         return loss
+    
+    def on_before_optimizer_step(self, optimizer):
+
+        for name, param in self.named_parameters():
+
+            if param.grad is None:
+                continue
+
+            print(
+                name,
+                "grad max =", param.grad.abs().max().item(),
+                "grad mean =", param.grad.abs().mean().item(),
+                "nan =", torch.isnan(param.grad).any().item(),
+                "inf =", torch.isinf(param.grad).any().item()
+            )
+        return super().on_before_optimizer_step(optimizer)
     
     def validation_step(self, batch: torch_geometric.data.Batch, batch_idx: int) -> torch.Tensor:
 

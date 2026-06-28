@@ -32,6 +32,8 @@ if __name__ == '__main__':
     if torch.cuda.is_available() and cfg['data_params']['num_workers'] > 1:
             torch.multiprocessing.set_start_method("spawn")
     pl.seed_everything(cfg['seed'])
+    torch.random.manual_seed(cfg['seed'])
+    torch.manual_seed(cfg['seed'])
 
     dm_class = aegnn.datasets.by_name(cfg['dataset'])
 
