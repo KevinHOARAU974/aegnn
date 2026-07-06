@@ -30,6 +30,7 @@ class NCaltech101(EventDataModule):
         self.dims = (240,180)
 
         self.format = format
+        print(self.format)
 
     def read_annotations(self, raw_file: str) -> Optional[np.ndarray]:
         annotations_dir = os.path.expanduser(os.path.join(os.environ["AEGNN_DATA_DIR"], "ncaltech101", "annotations"))
@@ -123,7 +124,7 @@ class NCaltech101(EventDataModule):
             events = np.column_stack((x, y, t, p))
             events = torch.from_numpy(events).float().cuda()
 
-            feature, pos = events[:, -1:], events[:, :3]
+            feature, pos = (events[:, -1:] + 1)//2, events[:, :3]
 
         return Data(x=feature, pos=pos) 
 
@@ -152,7 +153,7 @@ class NCaltech101(EventDataModule):
         print(f'RAW FILer length {len(raw_files)}')
         class_dict = {class_id: i for i, class_id in enumerate(self.classes)}
         kwargs = dict(load_func=load_func, class_dict=class_dict, pre_transform=self.pre_transform,
-                      read_label=self.read_label, read_annotations=self.read_annotations_h5)
+                      read_label=self.read_label, read_annotations=read_annotations)
         logging.debug(f"Found {len(raw_files)} raw files in dataset (mode = {mode})")
 
         task_manager = TaskManager(self.num_workers, queue_size=self.num_workers)

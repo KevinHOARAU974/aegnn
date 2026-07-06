@@ -26,6 +26,8 @@ if __name__ == '__main__':
     os.environ["AEGNN_DATA_DIR"] = cfg["data_dir"]
     print(os.environ["AEGNN_DATA_DIR"])
 
+    print(cfg)
+
     if cfg['debug']:
         aegnn.utils.loggers.LoggingLogger(None, name="debug")
 
@@ -35,8 +37,8 @@ if __name__ == '__main__':
 
     dm_class = aegnn.datasets.by_name(cfg['dataset'])
 
-    if cfg['dataset'] == 'nclatech101':
-        dm = dm_class(cfg["data_params"], format = cfg['format'])
+    if cfg['dataset'] == 'ncaltech101':
+        dm = dm_class(format = cfg['format'], **cfg["data_params"])
     else:
         dm = dm_class(cfg["data_params"])
         

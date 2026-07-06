@@ -57,14 +57,14 @@ def training(cfg):
                                       **cfg["model_params"])
     # print("model créé")
 
-    project = f"{cfg['project_name']}-{cfg['dataset']}-{cfg['task']}"
+    project = f"{cfg['project_name']}"
     experiment_name = datetime.datetime.now().strftime("%Y%m%d%H%M%S")
 
 
     #Loggers
     wandb_logger = WandbLogger(project=cfg["project_name"],
                         #    groupe = "ncars",
-                           name=f"{project}_{experiment_name}")
+                           name=f"aegnn-{cfg['task']}-{experiment_name}")
     
     wandb_logger.experiment.config.update(cfg)
     wandb_logger.experiment.config.update(aegnn.utils.git.get_git_info())
@@ -89,8 +89,8 @@ def training(cfg):
     checkpoint_callback = ModelCheckpoint(
         dirpath=checkpoint_path,
         filename="best",
-        monitor="Val/Accuracy",
-        mode='max',
+        monitor="val/loss",
+        mode='min',
         save_top_k=1,
         save_last=True,
         auto_insert_metric_name=False
@@ -99,9 +99,9 @@ def training(cfg):
 
     #Early Stopping
     early_stopping = EarlyStopping(
-        monitor="Val/Accuracy",
+        monitor="val/loss",
         patience=cfg['callback_params']['patience'],
-        mode='max',
+        mode='min',
         verbose=True
     )
 

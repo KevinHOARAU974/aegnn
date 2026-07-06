@@ -48,8 +48,8 @@ class RecognitionModel(pl.LightningModule):
 
         # y_prediction = torch.argmax(outputs, dim=-1)
         training_accuracy = accuracy(preds=outputs, target=batch.y, task="multiclass", num_classes=self.num_outputs)
-        self.log("Train/loss", loss, on_step=False, on_epoch=True, batch_size=batch_size,  prog_bar=True)
-        self.log("Train/Accuracy", training_accuracy, on_step=False, on_epoch=True, batch_size=batch_size, prog_bar=True)
+        self.log("train/loss", loss, on_step=False, on_epoch=True, batch_size=batch_size,  prog_bar=True)
+        self.log("train/acc", training_accuracy, on_step=False, on_epoch=True, batch_size=batch_size, prog_bar=True)
         return loss
     
     def on_train_epoch_end(self):
@@ -63,10 +63,10 @@ class RecognitionModel(pl.LightningModule):
 
         batch_size = batch.num_graphs
 
-        self.log("Val/loss", self.criterion(outputs, target=batch.y), on_step=False, on_epoch=True, batch_size=batch_size, prog_bar=True)
-        self.log("Val/Accuracy", accuracy(preds=outputs, target=batch.y, task="multiclass", num_classes=self.num_outputs), on_step=False, on_epoch=True, batch_size=batch_size, prog_bar=True)
+        self.log("val/loss", self.criterion(outputs, target=batch.y), on_step=False, on_epoch=True, batch_size=batch_size, prog_bar=True)
+        self.log("val/acc", accuracy(preds=outputs, target=batch.y, task="multiclass", num_classes=self.num_outputs), on_step=False, on_epoch=True, batch_size=batch_size, prog_bar=True)
         k = min(3, self.num_outputs - 1)
-        self.log(f"Val/Accuracy_Top{k}", accuracy(preds=outputs, target=batch.y,  task="multiclass", num_classes=self.num_outputs, top_k=k), on_step=False, on_epoch=True, batch_size=batch_size, prog_bar=True)
+        # self.log(f"val/acc_Top{k}", accuracy(preds=outputs, target=batch.y,  task="multiclass", num_classes=self.num_outputs, top_k=k), on_step=False, on_epoch=True, batch_size=batch_size, prog_bar=True)
         # return predictions 
 
     ### Test with Pytorch Lightning
@@ -87,54 +87,54 @@ class RecognitionModel(pl.LightningModule):
         self.test_preds.append(preds.cpu())
         self.test_targets.append(batch.y.cpu())
 
-        self.log("Test/loss", self.criterion(outputs, target=batch.y), on_step=False, on_epoch=True, batch_size=batch_size, prog_bar=True)
-        self.log("Test/Accuracy", accuracy(preds=outputs, target=batch.y, task="multiclass", num_classes=self.num_outputs), on_step=False, on_epoch=True, batch_size=batch_size, prog_bar=True)
-        k = min(3, self.num_outputs - 1)
-        self.log(f"Test/Accuracy_Top{k}", accuracy(preds=outputs, target=batch.y,  task="multiclass", num_classes=self.num_outputs, top_k=k), on_step=False, on_epoch=True, batch_size=batch_size, prog_bar=True)
+        self.log("test/loss", self.criterion(outputs, target=batch.y), on_step=False, on_epoch=True, batch_size=batch_size, prog_bar=True)
+        self.log("test/Accuracy", accuracy(preds=outputs, target=batch.y, task="multiclass", num_classes=self.num_outputs), on_step=False, on_epoch=True, batch_size=batch_size, prog_bar=True)
+        # k = min(3, self.num_outputs - 1)
+        # self.log(f"Test/Accuracy_Top{k}", accuracy(preds=outputs, target=batch.y,  task="multiclass", num_classes=self.num_outputs, top_k=k), on_step=False, on_epoch=True, batch_size=batch_size, prog_bar=True)
 
         # return super().test_step(*args, **kwargs)
 
-    def on_test_end(self):
+    # def on_test_end(self):
         
-        preds = torch.cat(self.test_preds)
-        targets = torch.cat(self.test_targets)
+    #     preds = torch.cat(self.test_preds)
+    #     targets = torch.cat(self.test_targets)
 
-        cm = confusion_matrix(targets, preds)
+    #     cm = confusion_matrix(targets, preds)
 
-        fig, ax = plt.subplots(figsize=(8, 8))
+    #     fig, ax = plt.subplots(figsize=(8, 8))
 
-        disp = ConfusionMatrixDisplay(
-            confusion_matrix=cm,
-            # display_labels=data_module.classes
-        )
+    #     disp = ConfusionMatrixDisplay(
+    #         confusion_matrix=cm,
+    #         # display_labels=data_module.classes
+    #     )
 
-        disp.plot(
-            ax=ax,
-            xticks_rotation=90,
-            colorbar=True
-        )
+    #     disp.plot(
+    #         ax=ax,
+    #         xticks_rotation=90,
+    #         colorbar=True
+    #     )
 
-        plt.tight_layout()
-        plt.savefig(f"{self.log_dir}/confusion_matrix.png", dpi=300)
-        plt.close()
+    #     plt.tight_layout()
+    #     plt.savefig(f"{self.log_dir}/confusion_matrix.png", dpi=300)
+    #     plt.close()
 
-        wandb_logger = None
+    #     wandb_logger = None
 
-        for logger in self.trainer.loggers:
-            if isinstance(logger, WandbLogger):
-                wandb_logger = logger
-                break
+    #     for logger in self.trainer.loggers:
+    #         if isinstance(logger, WandbLogger):
+    #             wandb_logger = logger
+    #             break
 
-        if wandb_logger is not None:
+    #     if wandb_logger is not None:
         
-            self.logger.experiment.log({
-            "conf_mat": wandb.plot.confusion_matrix(
-                probs=None,
-                y_true=targets.numpy(),
-                preds=preds.numpy(),
-                # class_names=self.classes
-            )
-        })
+    #         self.logger.experiment.log({
+    #         "conf_mat": wandb.plot.confusion_matrix(
+    #             probs=None,
+    #             y_true=targets.numpy(),
+    #             preds=preds.numpy(),
+    #             # class_names=self.classes
+    #         )
+    #     })
         
     def configure_optimizers(self):
         optimizer = torch.optim.Adam(self.parameters(), **self.optimizer_kwargs)
