@@ -1,5 +1,6 @@
 import torch
 import torch_geometric
+import torch.nn as nn
 
 from torch.nn import Linear
 from torch.nn.functional import elu
@@ -15,7 +16,7 @@ from aegnn.models.layer import MaxPooling, MaxPoolingX
 class GraphRes(torch.nn.Module):
 
     def __init__(self, dataset, input_shape: torch.Tensor, num_outputs: int, pooling_size=(16, 12),
-                 bias: bool = False, root_weight: bool = False):
+                 bias: bool = False, root_weight: bool = False, dropout_gcn=0.1, dropout_classifier=0.1):
         super(GraphRes, self).__init__()
         assert len(input_shape) == 3, "invalid input shape, should be (img_width, img_height, dim)"
         dim = int(input_shape[-1])
@@ -34,6 +35,9 @@ class GraphRes(torch.nn.Module):
             pooling_outputs = 128
         else:
             raise NotImplementedError(f"No model parameters for dataset {dataset}")
+        
+        self.dropout_gcn = nn.Dropout(dropout_gcn)
+        self.dropout_classifier = nn.Dropout(dropout_classifier)
 
         self.conv1 = SplineConv(n[0], n[1], dim=dim, kernel_size=kernel_size, bias=bias, root_weight=root_weight)
         self.norm1 = BatchNorm(in_channels=n[1])
@@ -59,20 +63,31 @@ class GraphRes(torch.nn.Module):
 
     def forward(self, data: torch_geometric.data.Batch) -> torch.Tensor:
         x_f = data.x.clone()
+
         x_f = elu(self.conv1(x_f, data.edge_index, data.edge_attr))
         x_f = self.norm1(x_f)
+        x_f = self.dropout_gcn(x_f)
+
         x_f = elu(self.conv2(x_f, data.edge_index, data.edge_attr))
         x_f = self.norm2(x_f)
+        x_f = self.dropout_gcn(x_f)
 
         x_sc = x_f.clone()
+
         x_f = elu(self.conv3(x_f, data.edge_index, data.edge_attr))
         x_f = self.norm3(x_f)
+        x_f = self.dropout_gcn(x_f)
+
         x_f = elu(self.conv4(x_f, data.edge_index, data.edge_attr))
         x_f = self.norm4(x_f)
+        x_f = self.dropout_gcn(x_f)
+
         x_f = x_f + x_sc
 
         x_f = elu(self.conv5(x_f, data.edge_index, data.edge_attr))
         x_f = self.norm5(x_f)
+        x_f = self.dropout_gcn(x_f)
+
         self.fm_to_pool = Data(x=x_f, pos=data.pos, batch=data.batch, edge_index=data.edge_index, edge_attr=data.edge_attr)
         data_pooled = self.pool5(x_f, pos=data.pos, batch=data.batch, edge_index=data.edge_index, return_data_obj=True)
 
@@ -80,14 +95,24 @@ class GraphRes(torch.nn.Module):
         x_sc = x_f.clone()
         x_f = elu(self.conv6(x_f, data_pooled.edge_index, data_pooled.edge_attr))
         x_f = self.norm6(x_f)
+        x_f = self.dropout_gcn(x_f)
+
         x_f = elu(self.conv7(x_f, data_pooled.edge_index, data_pooled.edge_attr))
         x_f = self.norm7(x_f)
+        x_f = self.dropout_gcn(x_f)
+
         x_f = x_f + x_sc
 
         self.fm_to_pool_x = Data(x=x_f, pos=data_pooled.pos, batch=data_pooled.batch, edge_index=data_pooled.edge_index, edge_attr=data_pooled.edge_attr)
         x = self.pool7(x_f, pos=data_pooled.pos[:, :2], batch=data_pooled.batch)
 
+        assert x.size(0) == data.num_graphs * 16
+
         x = x.reshape(data.num_graphs, -1)
 
         self.feature_map = x
-        return self.fc(x)
+
+        x = self.dropout_classifier(x)
+        x = self.fc(x)
+
+        return x
