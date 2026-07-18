@@ -15,7 +15,7 @@ import matplotlib.pyplot as plt
 class RecognitionModel(pl.LightningModule):
 
     def __init__(self, network, dataset: str, num_classes, img_shape: Tuple[int, int],
-                 dim: int = 3, lr= 1e-3, weight_decay = 5e-3, eta_min = 0.0, max_epochs = 100, scheduler_type = 'cosine', log_dir = None, **model_kwargs):
+                 dim: int = 3, lr= 1e-3, weight_decay = 5e-3, eta_min = 0.0, max_epochs = 100, scheduler_type = 'cosine', log_dir = None, test=None, **model_kwargs):
         
         super(RecognitionModel, self).__init__()
         self.criterion = torch.nn.CrossEntropyLoss()#label_smoothing=label_smoothing)
@@ -28,6 +28,7 @@ class RecognitionModel(pl.LightningModule):
         self.dim = dim #position and edge_attr dimension
 
         self.log_dir = log_dir
+        self.test = test
 
         model_input_shape = torch.tensor(img_shape + (dim, ), device=self.device)
         self.model = model_by_name(network)(dataset, model_input_shape, num_outputs=num_classes, **model_kwargs)
@@ -86,9 +87,15 @@ class RecognitionModel(pl.LightningModule):
 
         self.test_preds.append(preds.cpu())
         self.test_targets.append(batch.y.cpu())
-
-        self.log("test/loss", self.criterion(outputs, target=batch.y), on_step=False, on_epoch=True, batch_size=batch_size, prog_bar=True)
-        self.log("test/Accuracy", accuracy(preds=outputs, target=batch.y, task="multiclass", num_classes=self.num_outputs), on_step=False, on_epoch=True, batch_size=batch_size, prog_bar=True)
+        
+        if self.test == "acc": 
+            self.log("best_acc_model/loss", self.criterion(outputs, target=batch.y), on_step=False, on_epoch=True, batch_size=batch_size, prog_bar=True)
+            self.log("best_acc_model/acc", accuracy(preds=outputs, target=batch.y, task="multiclass", num_classes=self.num_outputs), on_step=False, on_epoch=True, batch_size=batch_size, prog_bar=True)
+        
+        elif self.test == "loss": 
+            self.log("best_loss_model/loss", self.criterion(outputs, target=batch.y), on_step=False, on_epoch=True, batch_size=batch_size, prog_bar=True)
+            self.log("best_loss_model/acc", accuracy(preds=outputs, target=batch.y, task="multiclass", num_classes=self.num_outputs), on_step=False, on_epoch=True, batch_size=batch_size, prog_bar=True)
+        
         # k = min(3, self.num_outputs - 1)
         # self.log(f"Test/Accuracy_Top{k}", accuracy(preds=outputs, target=batch.y,  task="multiclass", num_classes=self.num_outputs, top_k=k), on_step=False, on_epoch=True, batch_size=batch_size, prog_bar=True)
 

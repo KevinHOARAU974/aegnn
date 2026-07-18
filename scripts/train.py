@@ -86,11 +86,21 @@ def training(cfg):
     #Callbacks
 
     #Save best and last model 
-    checkpoint_callback = ModelCheckpoint(
+    checkpoint_callback_best_loss = ModelCheckpoint(
         dirpath=checkpoint_path,
-        filename="best",
+        filename="best_loss",
         monitor="val/loss",
         mode='min',
+        save_top_k=1,
+        save_last=True,
+        auto_insert_metric_name=False
+    )
+
+    checkpoint_callback_best_acc = ModelCheckpoint(
+        dirpath=checkpoint_path,
+        filename="best_acc",
+        monitor="val/acc",
+        mode='max',
         save_top_k=1,
         save_last=True,
         auto_insert_metric_name=False
@@ -110,7 +120,8 @@ def training(cfg):
     progress_bar =TQDMProgressBar(refresh_rate=1)
 
     callbacks = [
-        checkpoint_callback,
+        checkpoint_callback_best_loss,
+        checkpoint_callback_best_acc,
         early_stopping,
         lr_monitor,
         progress_bar
@@ -133,7 +144,7 @@ def training(cfg):
 
     # Test the best model
 
-    best_model = aegnn.models.recognition.RecognitionModel.load_from_checkpoint(f'{checkpoint_path}/best.ckpt',
+    best_model_loss = aegnn.models.recognition.RecognitionModel.load_from_checkpoint(f'{checkpoint_path}/best_loss.ckpt',
                                                                                 network=cfg["model"],
                                                                                 dataset=cfg["dataset"],
                                                                                 num_classes=data_module.num_classes,
@@ -141,10 +152,26 @@ def training(cfg):
                                                                                 max_epochs = cfg["trainer"]["max_epochs"],
                                                                                 bias = True,
                                                                                 root_weight = True,
-                                                                                log_dir = checkpoint_path, 
+                                                                                log_dir = checkpoint_path,
+                                                                                test='loss', 
                                                                                 **cfg["model_params"])
 
-    trainer.test(best_model, data_module)
+    trainer.test(best_model_loss, data_module)
+
+    best_model_acc = aegnn.models.recognition.RecognitionModel.load_from_checkpoint(f'{checkpoint_path}/best_acc.ckpt',
+                                                                                network=cfg["model"],
+                                                                                dataset=cfg["dataset"],
+                                                                                num_classes=data_module.num_classes,
+                                                                                img_shape=data_module.dims,
+                                                                                max_epochs = cfg["trainer"]["max_epochs"],
+                                                                                bias = True,
+                                                                                root_weight = True,
+                                                                                log_dir = checkpoint_path,
+                                                                                test = "acc", 
+                                                                                **cfg["model_params"])
+
+    trainer.test(best_model_acc, data_module)
+
 
 if __name__ == "__main__":
     main()
