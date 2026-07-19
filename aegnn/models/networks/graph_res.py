@@ -16,7 +16,7 @@ from aegnn.models.layer import MaxPooling, MaxPoolingX
 class GraphRes(torch.nn.Module):
 
     def __init__(self, dataset, input_shape: torch.Tensor, num_outputs: int, pooling_size=(16, 12),
-                 bias: bool = False, root_weight: bool = False, dropout_gcn=0.1, dropout_classifier=0.1):
+                 bias: bool = False, root_weight: bool = False, dropout_gcn=0.0, dropout_classifier=0.0):
         super(GraphRes, self).__init__()
         assert len(input_shape) == 3, "invalid input shape, should be (img_width, img_height, dim)"
         dim = int(input_shape[-1])
