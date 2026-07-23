@@ -78,8 +78,24 @@ def training(cfg):
     loggers = []
     loggers.append(wandb_logger)
 
-    checkpoint_path = os.path.expanduser(os.path.join(cfg["log_dir"], "checkpoints", cfg["dataset"], cfg["task"], experiment_name))
-    Path(checkpoint_path).mkdir(parents=True,exist_ok=True)
+    resume_ckpt = cfg.get("resume_ckpt", None)
+
+    if resume_ckpt is not None:
+        resume_ckpt = os.path.expanduser(resume_ckpt)
+
+        if not os.path.isfile(resume_ckpt):
+            raise FileNotFoundError(
+                f"Unfound checkpoint: {resume_ckpt}"
+            )
+
+        print("Resume of training")
+
+        checkpoint_path = resume_ckpt
+    else:
+        checkpoint_path = os.path.expanduser(os.path.join(cfg["log_dir"], "checkpoints", cfg["dataset"], cfg["task"], experiment_name))
+        Path(checkpoint_path).mkdir(parents=True,exist_ok=True)
+
+
     wandb_logger.experiment.config.update({"checkpoint_path": checkpoint_path})
 
 
@@ -107,13 +123,13 @@ def training(cfg):
     )
 
 
-    #Early Stopping
-    early_stopping = EarlyStopping(
-        monitor="val/loss",
-        patience=cfg['callback_params']['patience'],
-        mode='min',
-        verbose=True
-    )
+    # #Early Stopping
+    # early_stopping = EarlyStopping(
+    #     monitor="val/loss",
+    #     patience=cfg['callback_params']['patience'],
+    #     mode='min',
+    #     verbose=True
+    # )
 
     lr_monitor = LearningRateMonitor(logging_interval="epoch")
 
@@ -122,7 +138,7 @@ def training(cfg):
     callbacks = [
         checkpoint_callback_best_loss,
         checkpoint_callback_best_acc,
-        early_stopping,
+        # early_stopping,
         lr_monitor,
         progress_bar
     ]
@@ -140,7 +156,7 @@ def training(cfg):
                      **trainer_kwargs
                      )
 
-    trainer.fit(model, datamodule=data_module)
+    trainer.fit(model, datamodule=data_module, ckpt_path=resume_ckpt)
 
     # Test the best model
 

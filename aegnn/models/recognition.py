@@ -85,8 +85,8 @@ class RecognitionModel(pl.LightningModule):
 
         preds = outputs.argmax(dim=1)
 
-        self.test_preds.append(preds.cpu())
-        self.test_targets.append(batch.y.cpu())
+        # self.test_preds.append(preds.cpu())
+        # self.test_targets.append(batch.y.cpu())
         
         if self.test == "acc": 
             self.log("best_acc_model/loss", self.criterion(outputs, target=batch.y), on_step=False, on_epoch=True, batch_size=batch_size, prog_bar=True)
