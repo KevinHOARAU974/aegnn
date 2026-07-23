@@ -9,9 +9,10 @@ from typing import Callable, List, Optional, Union
 
 from .utils.normalization import normalize_time
 from .ncaltech101 import NCaltech101
+from .event_token import E2SRC_Module
 
 
-class NCars(NCaltech101):
+class NCars_get(NCaltech101):
 
     def __init__(
         self,
@@ -32,13 +33,12 @@ class NCars(NCaltech101):
         dims: tuple = (120,100),
         group_num: int = 4,
         patch_size: tuple = (4,4),
-        
-    ):  
-     
-        super(NCars, self).__init__(
+
+
+    ):
+        super(NCars_get, self).__init__(
             batch_size, shuffle, num_workers, pin_memory=pin_memory, transform=transform
         )
-
         self.method = method
         self.k_min = k_min
         self.k_max = k_max
@@ -51,9 +51,6 @@ class NCars(NCaltech101):
         self.dims = dims  # overwrite image shape
         self.group_num = group_num
         self.patch_size = patch_size
-        
-        
-        
 
     def read_annotations(self, raw_file: str) -> Optional[np.ndarray]:
         return None
@@ -65,27 +62,30 @@ class NCars(NCaltech101):
             label_txt = f.read().replace(" ", "").replace("\n", "")
         return "car" if label_txt == "1" else "background"
 
-    @staticmethod
-    def load(raw_file: str) -> Data:
+    def load(self, raw_file: str) -> Data:
         events_file = os.path.join(raw_file, "events.txt")
         events = torch.from_numpy(np.loadtxt(events_file)).float()  # .cuda()
         x, pos = events[:], events[:, :3]
 
+        e2src = E2SRC_Module(shape=self.dims, group_num=self.group_num, patch_size=self.patch_size)
 
-
-        return Data(x=x, pos=pos)
+        patch_tokens = e2src.get_token(x)
+        x_new =  torch.concat((x,patch_tokens),dim=1) # x[N,4] -> x[N,4+token_size]
+       
+        return Data(x=x_new, pos=pos)
+        
 
     def pre_transform(self, data: Data) -> Data:
-        
+
         # Re-weight temporal vs. spatial dimensions to account for different resolutions.
         # data.pos[:, 2] = normalize_time(data.pos[:, 2], beta=1000) # to have max_t=100
-        data.pos[:, 2] = normalize_time(data.pos[:, 2], beta=self.beta) # to have max_t=100
+        data.pos[:, 2] = normalize_time(data.pos[:, 2]) # to have max_t=100
         # Coarsen graph by uniformly sampling n points from the event point cloud.
         data = self.sub_sampling(data, n_samples=self.n_samples, sub_sample=self.sampling)
 
         if self.method == 'raduis':
-            # Radius graph generation.
-            data.edge_index = radius_graph(data.pos, r=self.r,max_num_neighbors=self.d_max)
+                    # Radius graph generation.
+                    data.edge_index = radius_graph(data.pos, r=self.r,max_num_neighbors=self.d_max)
         elif self.method == 'adaptative':
             k_min = self.k_min
             k_max = self.k_max
@@ -94,7 +94,7 @@ class NCars(NCaltech101):
             pos = data.pos.to("cuda")
             eps = 1e-5
             N = pos.size(0)
-   
+    
 
             dist = torch.cdist(pos, pos)
             dist.fill_diagonal_(float("inf"))

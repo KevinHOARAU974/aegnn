@@ -6,3 +6,4 @@ aegnn/wandb/
 
 training_log_aegnn/
 wandb/
+aegnn/scripts/train_beta.py

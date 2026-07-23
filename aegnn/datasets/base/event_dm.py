@@ -75,6 +75,7 @@ class EventDataModule(pl.LightningDataModule):
     def _add_edge_attributes(self, data: Data) -> Data:
         max_value = self.hparams.get("preprocessing", {}).get("r", None)
         edge_attr = Cartesian(norm=True, cat=False, max_value=max_value)
+        #edge_attr = Cartesian(norm=True, cat=False)
         return edge_attr(data)
 
     @abc.abstractmethod

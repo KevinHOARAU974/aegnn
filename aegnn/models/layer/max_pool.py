@@ -28,12 +28,12 @@ class MaxPooling(torch.nn.Module):
         start = self.start
         end = self.end
         if torch.is_tensor(voxel_size):
-            voxel_size = voxel_size.to(device=pos.device, dtype=pos.dtype)
+            voxel_size = torch.as_tensor(voxel_size, device=pos.device, dtype=pos.dtype)
         
-        if torch.is_tensor(start):
-            start = start.to(device=pos.device, dtype=pos.dtype)
-        if torch.is_tensor(end):
-            end = end.to(device=pos.device, dtype=pos.dtype)
+        if start is not None:
+            start = torch.as_tensor(start, device=pos.device, dtype=pos.dtype)
+        if end is not None:
+            end = torch.as_tensor(end, device=pos.device, dtype=pos.dtype)
         
         
         cluster = voxel_grid(pos[:, :2], batch=batch, size=self.voxel_size, start=start, end= end)

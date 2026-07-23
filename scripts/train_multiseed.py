@@ -8,14 +8,14 @@ import torch
 import os
 
 
-os.environ["AEGNN_DATA_DIR"] = "/home/ibrahim/event_graph_aegnn/test_codes/data"
+os.environ["AEGNN_DATA_DIR"] = "/home/ibrahim/event_graph_aegnn/test_codes/data/ncars/beta_processed/adaptative_preprocessing/xytp_adap_beta_1000-4-16/"
 print(os.environ["AEGNN_DATA_DIR"])
 
 config_path = Path("/home/ibrahim/event_graph_aegnn/config/config.yaml")
 
 
 
-for seed in range(10,16):
+for seed in range(12345,12350):
     print(f"\n ------- SEED {seed} --------\n")
 
     #Opening the config file to change the seed

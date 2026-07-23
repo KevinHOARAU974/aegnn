@@ -2,6 +2,7 @@ from aegnn.datasets.base.event_dm import EventDataModule
 
 from aegnn.datasets.ncaltech101 import NCaltech101
 from aegnn.datasets.ncars import NCars
+from aegnn.datasets.ncars_get import NCars_get
 from aegnn.datasets.gen1 import Gen1
 
 
@@ -13,6 +14,8 @@ def by_name(name: str) -> EventDataModule.__class__:
         return NCaltech101
     elif name.lower() == "ncars":
         return NCars
+    elif name.lower() == "ncars_get":
+        return NCars_get
     elif name.lower() == "gen1":
         return Gen1
     else:

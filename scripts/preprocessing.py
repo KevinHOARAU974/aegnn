@@ -37,5 +37,6 @@ if __name__ == '__main__':
 
     dm_class = aegnn.datasets.by_name(cfg['dataset'])
 
-    dm = dm_class(cfg["data_params"])
+    dm = dm_class.from_cfg(cfg["data_params"])
+    
     dm.prepare_data()

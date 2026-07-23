@@ -30,6 +30,7 @@ def main() -> None:
     print(cfg)
 
     os.environ["AEGNN_DATA_DIR"] = cfg["data_dir"]
+    print(os.environ["AEGNN_DATA_DIR"])
 
     pl.seed_everything(cfg["seed"], workers=True)
 
@@ -39,12 +40,12 @@ def main() -> None:
 def training(cfg):
 
     gpu = True if torch.cuda.is_available() else False
-    print(f"\n Is the GPU available: {gpu} \n")
 
     #Load data module
     data_module = aegnn.datasets.by_name(cfg['dataset']).from_cfg(cfg['data_params'])
     # print('module créé')
     data_module.setup()
+
     #Create model
     model = aegnn.models.by_task(cfg['task'])(cfg["model"],
                                       cfg["dataset"],
@@ -85,15 +86,28 @@ def training(cfg):
     #Callbacks
 
     #Save best and last model 
+    # checkpoint_callback = ModelCheckpoint(
+    #     dirpath=checkpoint_path,
+    #     filename="best",
+    #     monitor="Val/Accuracy",
+    #     #monitor="Val/loss",
+    #     mode='max',
+    #     save_top_k=1,
+    #     save_last=True,
+    #     auto_insert_metric_name=False
+    # )
+
+    #Save best and last model, best val loss 
     checkpoint_callback = ModelCheckpoint(
         dirpath=checkpoint_path,
-        filename="best-{epoch:02d}-{val_loss:.4f}",
-        monitor="Val/Accuracy",
-        mode='max',
+        filename="best",
+        monitor="Val/loss",
+        mode='min',
         save_top_k=1,
         save_last=True,
         auto_insert_metric_name=False
     )
+
 
     #Early Stopping
     early_stopping = EarlyStopping(
@@ -128,6 +142,21 @@ def training(cfg):
                      )
 
     trainer.fit(model, datamodule=data_module)
+
+    # Test the best model
+
+    best_model = aegnn.models.recognition.RecognitionModel.load_from_checkpoint(f'{checkpoint_path}/best.ckpt',
+                                                                                network=cfg["model"],
+                                                                                dataset=cfg["dataset"],
+                                                                                num_classes=data_module.num_classes,
+                                                                                img_shape=data_module.dims,
+                                                                                max_epochs = cfg["trainer"]["max_epochs"],
+                                                                                bias = True,
+                                                                                root_weight = True,
+                                                                                log_dir = checkpoint_path, 
+                                                                                **cfg["model_params"])
+
+    trainer.test(best_model, data_module)
 
 if __name__ == "__main__":
     main()
